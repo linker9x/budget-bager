@@ -10,7 +10,10 @@ from sklearn.base import TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
+
+import pickle
 
 
 # tokenize the text from the description field
@@ -43,16 +46,16 @@ class predictors(TransformerMixin):
 def clean_text(text):
     return text.strip().lower()
 
-def classify_expenses():
-    bow_vector = CountVectorizer(tokenizer = spacy_tokenizer, ngram_range=(1,1))
+def classify_expenses(df):
+    # bow_vector = CountVectorizer(tokenizer = spacy_tokenizer, ngram_range=(1,1))
     tfidf_vector = TfidfVectorizer(tokenizer = spacy_tokenizer)
 
-    X = pnc['Description'].append(chase['Description']) # the features we want to analyze
-    ylabels = pnc['Category'].append(chase['Category']) # the labels, or answers, we want to test against
+    X = df['Description'] # the features we want to analyze
+    ylabels = df['Category'] # the labels, or answers, we want to test against
 
     X_train, X_test, y_train, y_test = train_test_split(X, ylabels, test_size=0.1)
 
-    classifier = MLPClassifier()
+    classifier = MLPClassifier(solver='lbfgs', activation='logistic')
 
     # Create pipeline using Bag of Words
     pipe = Pipeline([("cleaner", predictors()),
@@ -69,20 +72,15 @@ def classify_expenses():
     print("Logistic Regression Precision:",metrics.precision_score(y_test, predicted, average='weighted'))
     print("Logistic Regression Recall:",metrics.recall_score(y_test, predicted, average='weighted'))
 
-    frame = { 'Descrip': X_test, 'Prediction': predicted }
-    result = pd.DataFrame(frame)
-    result.head(30)
+    return pipe
 
 
-def read_write_classifier():
-    # import pickle
+def read_write_classifier(filename, pipe=None, write=False):
+    if write:
+        pickle.dump(pipe, open(filename, 'wb'))
+    else:
+        return pickle.load(open(filename, 'rb'))
 
-    # filename = './exp_label_MLP.sav'
-    # pickle.dump(pipe, open(filename, 'wb'))
-
-    # loaded_model = pickle.load(open(filename, 'rb'))
-    # result = loaded_model.score(X_test, y_test)
-    # print(result)
 
 # # find the rows with deposits
 # indexNames = pnc[pnc['Withdrawals'].isnull()].index
