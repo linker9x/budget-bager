@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-import budget_badger.classifier.expense_classifier as ec
+import data_processing.classifier.expense_classifier as ec
 
 class DataProcessor(object):
 
@@ -15,9 +15,9 @@ class DataProcessor(object):
 
     def load_pnc_csv(self):
         pnc_df = pd.DataFrame()
-        for file in os.listdir('../statements/PNC/'):
+        for file in os.listdir('./statements/PNC/'):
             if file.endswith(".csv"):
-                filepath = '../statements/PNC/' + file
+                filepath = './statements/PNC/' + file
                 temp_df = pd.read_csv(filepath)
                 if pnc_df.empty:
                     pnc_df = temp_df
@@ -34,14 +34,14 @@ class DataProcessor(object):
         pnc_df['Category'] = ec.classify_df(pnc_df)
 
         pnc_df.info()
-        pnc_df.to_csv('../statements/PNC/clf/PNC_new.csv', index=False)
+        pnc_df.to_csv('./statements/PNC/clf/PNC_new.csv', index=False)
         print(pnc_df)
 
     def load_chase_csv(self):
         chase_df = pd.DataFrame()
-        for file in os.listdir('../statements/Chase/'):
+        for file in os.listdir('./statements/Chase/'):
             if file.endswith(".csv"):
-                filepath = '../statements/Chase/' + file
+                filepath = './statements/Chase/' + file
                 temp_df = pd.read_csv(filepath)
                 if chase_df.empty:
                     chase_df = temp_df
@@ -57,14 +57,14 @@ class DataProcessor(object):
 
         chase_df.info()
 
-        chase_df.to_csv('../statements/Chase/clf/Chase_new.csv', index=False)
+        chase_df.to_csv('./statements/Chase/clf/Chase_new.csv', index=False)
         print(chase_df)
 
     def load_amazon_csv(self):
         amzn_df = pd.DataFrame()
-        for file in os.listdir('../statements/Amazon/'):
+        for file in os.listdir('./statements/Amazon/'):
             if file.endswith(".csv"):
-                filepath = '../statements/Amazon/' + file
+                filepath = './statements/Amazon/' + file
                 temp_df = pd.read_csv(filepath)
                 if amzn_df.empty:
                     amzn_df = temp_df
@@ -73,38 +73,3 @@ class DataProcessor(object):
 
         amzn_df.reset_index(inplace=True, drop=True)
         print(amzn_df)
-
-    # # find the rows with deposits
-# indexNames = pnc[pnc['Withdrawals'].isnull()].index
-#
-# # separate DF for deposits
-# pnc_deposits = pnc.loc[indexNames]
-# # remove from withdrawals
-# pnc.drop(indexNames, axis=0, inplace=True)
-#
-# # rename amount col
-# pnc.rename(columns={'Withdrawals': 'Amount'}, inplace=True)
-# pnc_deposits.rename(columns={'Deposits': 'Amount'}, inplace=True)
-# # drop unnecessary cols
-# pnc.drop(['Deposits', 'Balance'], axis=1, inplace=True)
-# pnc_deposits.drop(['Withdrawals', 'Balance'], axis=1, inplace=True)
-#
-# # drop unnecessary cols, move category to end and rename 'Trans Date'
-# chase.drop(['Post Date', 'Type'], axis=1, inplace=True)
-# chase['Category'] = chase.pop('Category')
-# chase.rename(columns={'Transaction Date': 'Date'}, inplace=True)
-#
-# # find the rows with deposits
-# indexNames = chase[chase['Amount'] > 0].index
-#
-# # separate DF for deposits
-# chase_payments = chase.loc[indexNames]
-# # remove from withdrawals
-# chase.drop(indexNames, axis=0, inplace=True)
-#
-# # abs of amount
-# chase['Amount'] = chase['Amount'].abs()
-#
-# pnc.head()
-#
-# chase.head()
