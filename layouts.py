@@ -16,10 +16,43 @@ home = html.Div([header.Header(),
     html.H1('home')
 ])
 
-page2 = html.Div([header.Header(),
-    html.H1('page2')
+##########
+# Overview Page
+##########
+page2 = html.Div([
+    html.Div([
+        # HEADER
+        header.Header(),
+        # PAGE NAME
+        html.Div([
+            html.H6(['Page2'], className="bb-header", style={'marginTop': 10})
+        ]),
+        html.Div([
+            dcc.DatePickerRange(
+              id='p2-date-picker',
+              min_date_allowed=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+              max_date_allowed=df['Date'].max().to_pydatetime(),
+              initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
+              start_date=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+              end_date=df['Date'].max().to_pydatetime(),
+            )
+        ]),
+        # TOP DIV
+        html.Div([dcc.Graph(id='in-out-area-graph')]),
+        # BOTTOM DIV
+        html.Div([
+            # Fixed + Var Graph
+            html.Div([dcc.Graph(id='fixed-var-stacked')]),
+            # Pie charts
+            html.Div([dcc.Graph(id='fixed-pie'), dcc.Graph(id='var-pie')])
+        ])
+    ])
 ])
 
+
+##########
+# Statement Page
+##########
 page1 = html.Div([
     html.Div([
         # HEADER
@@ -29,7 +62,7 @@ page1 = html.Div([
             html.H6(['Page1'], className="bb-header", style={'marginTop': 10})
         ]),
         html.Div(id='descrip-date'),
-        # DATE PICKER
+        # DATE/CAT PICKER
         html.Div([
             html.Div([
                 dcc.DatePickerRange(
@@ -64,17 +97,11 @@ page1 = html.Div([
                 id='stat-datatable',
                 columns=[{"name": i, "id": i} for i in df.columns],
                 # + [{"name": j, "id": j} for j in df.columns],
-                style_table={'maxWidth': '1500px'},
+                style_table={'maxWidth': '1500px', 'height': 400},
                 # editable=True,
                 # row_selectable="multi",
                 # selected_rows=[0],
                 ),
-        ], className=" twelve columns"),
-        #GRAPH?
-        html.Div([
-            html.Div([
-                dcc.Graph(id='paid-search')
-              ], className=" twelve columns")
-        ], className="row ")
+        ], className=" twelve columns")
     ])
 ])

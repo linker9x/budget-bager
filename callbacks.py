@@ -1,8 +1,15 @@
 from dash.dependencies import Input, Output
 from layouts import home, page1, page2
-from components.functions import update_datatable
+from components.functions import update_datatable, update_period_df
 from datetime import datetime
 from datetime import date, timedelta
+import plotly.graph_objs as go
+import pandas as pd
+import numpy as np
+
+__fixed_cat = ['CAR', 'HEALTHCARE', 'FITNESS']
+__var_cat = ['AMAZON', 'TRAVEL', 'PERSONAL', 'SHOPPING', 'ENTERTAINMENT', 'CATS',
+             'GROCERIES', 'RESTAURANT', 'GAS']
 
 def register_callbacks(app):
 
@@ -20,7 +27,7 @@ def register_callbacks(app):
             return None
 
 
-    #### Date Picker Callback
+    #### P1 - Date Picker Callback
     @app.callback(Output('descrip-date', 'children'),
                   [Input('stat-date-picker', 'start_date'),
                    Input('stat-date-picker', 'end_date')])
@@ -44,7 +51,7 @@ def register_callbacks(app):
         else:
             return string_prefix
 
-    #### Table Callback
+    #### P1 - Table Callback
     @app.callback(Output('stat-datatable', 'data'),
                   [Input('stat-date-picker', 'start_date'),
                    Input('stat-date-picker', 'end_date'),
@@ -53,3 +60,64 @@ def register_callbacks(app):
     def update_data_1(start_date, end_date, categories, accounts):
         data_1 = update_datatable(start_date, end_date, categories, accounts)
         return data_1
+
+    #### P2 - Area Graph
+    @app.callback(Output('in-out-area-graph', 'figure'),
+                  [Input('p2-date-picker', 'start_date'),
+                   Input('p2-date-picker', 'end_date')])
+    def update_p2_area_graph(start_date, end_date):
+        df = update_period_df(start_date, end_date)
+        df_in = df[df['Amount'] >= 0].groupby(pd.Grouper(key='Date', freq='M')).sum()
+        df_out = df[df['Amount'] < 0].groupby(pd.Grouper(key='Date', freq='M')).sum()
+
+        data = [go.Scatter(x=[mon.strftime('%B') for mon in df_in.index],
+                           y=df_in['Amount'],
+                           name='INCOME',
+                           fill='tonexty'),
+                go.Scatter(x=[mon.strftime('%B') for mon in df_out.index],
+                           y=df_out['Amount'].abs(),
+                           name='EXPENSE',
+                           fill='tonexty')]
+        layout = go.Layout()
+        return {'data': data, 'layout': None}
+
+    #### P2 - Stacked Bar Graph
+    @app.callback(Output('fixed-var-stacked', 'figure'),
+                  [Input('p2-date-picker', 'start_date'),
+                   Input('p2-date-picker', 'end_date')])
+    def update_p2_stacked(start_date, end_date):
+        df = update_period_df(start_date, end_date)
+        df_months = pd.DatetimeIndex(df['Date']).to_period('M').unique()
+
+        data = [go.Bar(x=df_months.month,
+                       y=df[df['Category'] == cat].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].sum().abs(),
+                       name=cat)
+                for cat in __fixed_cat + __var_cat]
+        layout = go.Layout(barmode='stack')
+        return {'data': data, 'layout': layout}
+
+    #### P2 - Fixed Pie
+    @app.callback(Output('fixed-pie', 'figure'),
+                  [Input('p2-date-picker', 'start_date'),
+                   Input('p2-date-picker', 'end_date')])
+    def update_p2_fixed(start_date, end_date):
+        df = update_period_df(start_date, end_date)
+        df_cat = df.groupby('Category')['Amount'].agg(['sum'])
+        df_fixed = df_cat[df_cat.index.isin(__fixed_cat)]
+
+        data = [go.Pie(labels=df_fixed.index, values=df_fixed['sum'].abs())]
+        layout = go.Layout()
+        return {'data': data, 'layout': None}
+
+    #### P2 - Var Pie
+    @app.callback(Output('var-pie', 'figure'),
+                  [Input('p2-date-picker', 'start_date'),
+                   Input('p2-date-picker', 'end_date')])
+    def update_p2_var(start_date, end_date):
+        df = update_period_df(start_date, end_date)
+        df_cat = df.groupby('Category')['Amount'].agg(['sum'])
+        df_var = df_cat[df_cat.index.isin(__var_cat)]
+
+        data = [go.Pie(labels=df_var.index, values=df_var['sum'].abs())]
+        layout = go.Layout()
+        return {'data': data, 'layout': None}

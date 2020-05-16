@@ -18,5 +18,18 @@ def update_datatable(start_date, end_date, categories, accounts):
     df_sub = copy.deepcopy(df)
     df_sub = df_sub[(df_sub['Date'] >= start_date_string) & (df_sub['Date'] <= end_date_string)
                     & df_sub['Category'].isin(categories)
-                    & df_sub['Source'].isin(accounts)].reset_index().sort_values(by=['Date'])
+                    & df_sub['Source'].isin(accounts)].sort_values(by=['Date']).reset_index(drop=True)
     return df_sub.to_dict("rows")
+
+def update_period_df(start_date, end_date):
+    if start_date is not None:
+        start_date = datetime.strptime(start_date[:10], '%Y-%m-%d')
+        start_date_string = start_date.strftime('%Y-%m-%d')
+    if end_date is not None:
+        end_date = datetime.strptime(end_date[:10], '%Y-%m-%d')
+        end_date_string = end_date.strftime('%Y-%m-%d')
+
+    df_sub = copy.deepcopy(df)
+    df_sub = df_sub[(df_sub['Date'] >= start_date_string) & (df_sub['Date'] <= end_date_string)
+                    & ~df_sub['Category'].isin(['PAYMENT', 'SAVINGS'])].sort_values(by=['Date']).reset_index(drop=True)
+    return df_sub
