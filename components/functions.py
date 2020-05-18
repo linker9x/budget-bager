@@ -7,6 +7,7 @@ df_chase = pd.read_csv('./data/Chase_12M.csv')
 df = pd.concat([df_pnc, df_chase]).reset_index(drop=True).sort_values(by=['Date'])
 df['Date'] = pd.to_datetime(df['Date'])
 
+
 def update_datatable(start_date, end_date, categories, accounts):
     if start_date is not None:
         start_date = datetime.strptime(start_date[:10], '%Y-%m-%d')
@@ -21,6 +22,7 @@ def update_datatable(start_date, end_date, categories, accounts):
                     & df_sub['Source'].isin(accounts)].sort_values(by=['Date']).reset_index(drop=True)
     return df_sub.to_dict("rows")
 
+
 def update_period_df(start_date, end_date):
     if start_date is not None:
         start_date = datetime.strptime(start_date[:10], '%Y-%m-%d')
@@ -33,3 +35,15 @@ def update_period_df(start_date, end_date):
     df_sub = df_sub[(df_sub['Date'] >= start_date_string) & (df_sub['Date'] <= end_date_string)
                     & ~df_sub['Category'].isin(['PAYMENT', 'SAVINGS'])].sort_values(by=['Date']).reset_index(drop=True)
     return df_sub
+
+
+def update_p3_table_df(start_date_string, end_date_string, categories, mode):
+    df_sub = copy.deepcopy(df)
+
+    if mode == 'MULTI':
+        df_sub = df_sub[(df_sub['Date'] >= start_date_string) & (df_sub['Date'] <= end_date_string)
+                        & df_sub['Category'].isin(categories)].sort_values(by=['Category', 'Date']).reset_index(drop=True)
+    else:
+        df_sub = df_sub[(df_sub['Date'] >= start_date_string) & (df_sub['Date'] <= end_date_string)
+                        & (df_sub['Category'] == categories)].sort_values(by=['Date']).reset_index(drop=True)
+    return df_sub.to_dict("rows")
