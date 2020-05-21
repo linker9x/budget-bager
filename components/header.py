@@ -42,6 +42,7 @@ def get_menu():
         dcc.Link('P1 - Table   |', href='/page1/', className="tab"),
         dcc.Link('P2 - Period   |', href='/page2/', className="tab"),
         dcc.Link('P3 - Category   |', href='/page3/', className="tab"),
+        dcc.Link('P4 - Forecast   |', href='/page4/', className="tab")
 
     ], className="row ")
     return menu

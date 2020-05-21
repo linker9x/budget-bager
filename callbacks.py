@@ -1,7 +1,7 @@
 import dash
 from dash.dependencies import Input, Output, State
-from layouts import home, page1, page2, page3
-from components.functions import update_datatable, update_period_df, update_p3_table_df
+from layouts import home, page1, page2, page3, page4
+from components.functions import update_datatable, update_period_df, update_p3_table_df, update_period_df_all
 from datetime import datetime
 from datetime import date, timedelta
 import plotly.graph_objs as go
@@ -28,6 +28,8 @@ def register_callbacks(app):
             return page2
         elif pathname == '/page3/':
             return page3
+        elif pathname == '/page4/':
+            return page4
         else:
             return None
 
@@ -262,7 +264,7 @@ def register_callbacks(app):
         barData = args[-1]
 
         # print('START\n{}\n{}\nEND'.format(categories, mode))
-        print('START\n{}\n{}\n{}\n END'.format(timeData, boxData, barData))
+        # print('START\n{}\n{}\n{}\n END'.format(timeData, boxData, barData))
 
         if timeData:
             month_year = timeData['points'][0]['x']
@@ -283,7 +285,7 @@ def register_callbacks(app):
             elif mode == 'MONO':
                 category = categories
                 month_year = boxData['points'][0]['x']
-                print(month_year)
+
                 month = datetime.strptime(month_year + '-1', '%b-%Y-%d').strftime('%m')
                 year = datetime.strptime(month_year + '-1', '%b-%Y-%d').strftime('%Y')
                 eom = calendar.monthrange(int(year), int(month))[1]
@@ -305,3 +307,53 @@ def register_callbacks(app):
 
             return update_p3_table_df(start_date, end_date, categories, mode)
         return pd.DataFrame().to_dict('rows')
+
+    # P4 - Time series
+    @app.callback(Output('p4-time-forecast-plot', 'figure'),
+                  [Input('p4-date-picker', 'start_date'),
+                   Input('p4-date-picker', 'end_date'),
+                   Input('p4-month-dropdown', 'value')])
+    def update_p4_time(start_date, end_date, months):
+        df = update_period_df_all(start_date, end_date)
+        __fixed = {'FITNESS': 40.0, 'HEALTHCARE': 420.0, 'PHONE': 41.0, 'CAR': 300.0}
+        __goals = {'AMAZON': 0, 'CATS': 50.0, 'ENTERTAINMENT': 500.0, 'GAS': 150.0, 'GROCERIES': 400.0,
+                   'PERSONAL': 100.0, 'RESTAURANT': 200.0, 'SHOPPING': 100.0, 'TRAVEL': 0}
+
+        __var = ['AMAZON', 'CATS', 'ENTERTAINMENT', 'GAS', 'GROCERIES',
+                 'PERSONAL', 'RESTAURANT', 'SHOPPING', 'TRAVEL']
+        # bal of prev month + curr mon in + curr mon out should equal EOM balance
+        # df_in = df[(df['Amount'] >= 0) & (df['Source'] == 'PNC')].groupby(pd.Grouper(key='Date', freq='M')).sum()
+        # print(df_in)
+        # df_out = df[(df['Amount'] < 0) & (df['Source'] == 'PNC')].groupby(pd.Grouper(key='Date', freq='M')).sum()
+        # print(df_out)
+
+        # These should be equal
+        # df_chase = df[(df['Source'] == 'Chase') & (df['Category'] == 'PAYMENT')].groupby(pd.Grouper(key='Date', freq='M')).sum()
+        # print(df_chase)
+        # df_pnc = df[(df['Source'] == 'PNC') & (df['Category'] == 'PAYMENT')].groupby(pd.Grouper(key='Date', freq='M')).sum()
+        # print(df_pnc)
+
+        fixed_exp = 0
+        for key in __fixed:
+            fixed_exp += __fixed[key]
+
+        print(fixed_exp)
+        df_monthly_totals = df
+        df_monthly_totals['Amount'] = df_monthly_totals['Amount'].abs()
+        df_monthly_totals = df_monthly_totals[(df_monthly_totals['Amount'] < 200) & df_monthly_totals['Category'].isin(__var)]
+        df_monthly_totals = df_monthly_totals.groupby(['Category', pd.Grouper(key='Date', freq='M')]).sum()
+
+        df_monthly_totals_agg = df_monthly_totals.groupby(['Category']).agg(['mean', 'std'])
+        df_monthly_totals_agg = df_monthly_totals_agg.fillna(0)
+        df_monthly_totals_agg['worst'] = df_monthly_totals_agg['Amount']['mean'] \
+                                                   + df_monthly_totals_agg['Amount']['std'] * .5
+        df_monthly_totals_agg['best'] = df_monthly_totals_agg['Amount']['mean'] - \
+                                                   df_monthly_totals_agg['Amount']['std'] * .5
+        print(df_monthly_totals_agg['Amount']['mean'].sum() + fixed_exp)
+        print(df_monthly_totals_agg['worst'].sum() + fixed_exp)
+        print(df_monthly_totals_agg['best'].sum() + fixed_exp)
+
+
+
+
+        return {'data': None, 'layout': None}

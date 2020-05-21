@@ -19,6 +19,43 @@ home = html.Div([header.Header(),
     html.H1('home')
 ])
 
+page4 = html.Div([
+    html.Div([
+            # HEADER
+            header.Header(),
+            # PAGE NAME
+            html.Div([
+                html.H6(['Page4'], className="bb-header", style={'marginTop': 10})
+            ])
+    ]),
+    # SELECTION/INPUTS
+    html.Div([
+        dcc.DatePickerRange(
+          id='p4-date-picker',
+          min_date_allowed=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+          max_date_allowed=df['Date'].max().to_pydatetime(),
+          initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
+          start_date=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+          end_date=df['Date'].max().to_pydatetime(),
+        ),
+        dcc.Dropdown(
+            options=[
+                {'label': '3 Month', 'value': '3'},
+                {'label': '6 Month', 'value': '6'}
+            ],
+            value='3',
+            clearable=False,
+            id='p4-month-dropdown'
+        )
+    ]),
+    # GRAPH(S)
+    html.Div([
+        html.Div([dcc.Graph(id='p4-time-forecast-plot',
+                            clear_on_unhover=True)
+                  ])
+    ])
+])
+
 
 ##########
 # Category Overview Page
