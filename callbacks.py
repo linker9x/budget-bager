@@ -5,6 +5,7 @@ from components.functions import update_datatable, update_period_df, update_p3_t
     return_balance, return_budget
 from datetime import datetime
 from datetime import date, timedelta
+from dateutil.relativedelta import *
 import plotly.graph_objs as go
 import pandas as pd
 import numpy as np
@@ -372,16 +373,30 @@ def register_callbacks(app):
         scenarios = {'best': best.to_list()[0], 'base': base.to_list()[0], 'worst': worst.to_list()[0]}
 
         df_group = return_balance().groupby(pd.Grouper(key='Date', freq='M'))['Account Balance'].agg(['sum'])
+        last_month = df_group.tail(1)
+        forecast = {last_month.index[0]: last_month['sum'].to_list()[0]}
 
+        for i in range(int(months) + 1):
+            fore_date = last_month.index[0] + relativedelta(months=+2 + i, day=1) - timedelta(days=1)
+            temp_dict = {}
+
+            for key in scenarios:
+                temp_dict[key] = last_month['sum'].to_list()[0] - (scenarios[key] * (i + 1))
+
+            forecast[fore_date] = temp_dict
+
+        df_forecast = pd.DataFrame(forecast).T
+        print(df_forecast)
         actual = go.Scatter(x=df_group.index.strftime('%b-%Y'),
                             y=df_group['sum'].abs(),
                             name='Actual')
 
         traces = [actual]
-        for scenario in scenarios.keys():
-            trace = go.Scatter(x=['Apr-2020', 'May-2020', 'Jun-2020', 'Jul-2020'],
-                               y=[17105.46, 15390.46, 13353.46, 11316.46],
-                               name=scenario)
+        for key in scenarios:
+            # print(scenarios[key])
+            trace = go.Scatter(x=df_forecast.index.strftime('%b-%Y'),
+                               y=df_forecast[key],
+                               name=key)
             traces.append(trace)
 
         return {'data': traces, 'layout': None}
