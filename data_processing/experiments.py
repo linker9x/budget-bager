@@ -20,6 +20,6 @@ if __name__ == "__main__":
     #                          result, write=True)
 
     data = dp.DataProcessor()
-    data.load_pnc_csv()
+    # data.load_pnc_csv()
     data.load_chase_csv()
     # data.load_amazon_csv()

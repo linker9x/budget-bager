@@ -1,7 +1,8 @@
 import dash
 from dash.dependencies import Input, Output, State
 from layouts import home, page1, page2, page3, page4
-from components.functions import update_datatable, update_period_df, update_p3_table_df, update_period_df_all
+from components.functions import update_datatable, update_period_df, update_p3_table_df, update_period_df_all, \
+    return_balance, return_budget
 from datetime import datetime
 from datetime import date, timedelta
 import plotly.graph_objs as go
@@ -314,13 +315,20 @@ def register_callbacks(app):
                    Input('p4-date-picker', 'end_date'),
                    Input('p4-month-dropdown', 'value')])
     def update_p4_time(start_date, end_date, months):
-        df = update_period_df_all(start_date, end_date)
-        __fixed = {'FITNESS': 40.0, 'HEALTHCARE': 420.0, 'PHONE': 41.0, 'CAR': 300.0}
-        __goals = {'AMAZON': 0, 'CATS': 50.0, 'ENTERTAINMENT': 500.0, 'GAS': 150.0, 'GROCERIES': 400.0,
-                   'PERSONAL': 100.0, 'RESTAURANT': 200.0, 'SHOPPING': 100.0, 'TRAVEL': 0}
+        bdgt_amt = return_budget()
 
-        __var = ['AMAZON', 'CATS', 'ENTERTAINMENT', 'GAS', 'GROCERIES',
-                 'PERSONAL', 'RESTAURANT', 'SHOPPING', 'TRAVEL']
+        bdgt_amt_var = bdgt_amt[bdgt_amt['Type'] == 'VAR']
+        var_cat = bdgt_amt_var['Category'] + ' ' + bdgt_amt_var['Subcategory']
+
+        bdgt_amt_fix1 = bdgt_amt[(bdgt_amt['Type'] == 'FIX') & (bdgt_amt['Period'] == 1)]
+        fix1_cat = bdgt_amt_fix1['Category'] + ' ' + bdgt_amt_fix1['Subcategory']
+        fixed_exp1 = bdgt_amt_fix1['Amount'].sum()
+
+        bdgt_amt_fix6 = bdgt_amt[(bdgt_amt['Type'] == 'FIX') & (bdgt_amt['Period'] == 6)]
+
+        df = update_period_df_all(start_date, end_date)
+        df['Combined'] = df['Category'] + ' ' + df['Subcategory']
+
         # bal of prev month + curr mon in + curr mon out should equal EOM balance
         # df_in = df[(df['Amount'] >= 0) & (df['Source'] == 'PNC')].groupby(pd.Grouper(key='Date', freq='M')).sum()
         # print(df_in)
@@ -333,27 +341,47 @@ def register_callbacks(app):
         # df_pnc = df[(df['Source'] == 'PNC') & (df['Category'] == 'PAYMENT')].groupby(pd.Grouper(key='Date', freq='M')).sum()
         # print(df_pnc)
 
-        fixed_exp = 0
-        for key in __fixed:
-            fixed_exp += __fixed[key]
+        df_mon_var = df
+        df_mon_var['Amount'] = df_mon_var['Amount'].abs()
+        df_mon_var = df_mon_var[(df_mon_var['Amount'] < 200) &
+                                df_mon_var['Combined'].isin(var_cat.unique())]
+        df_mon_var = df_mon_var.groupby(['Combined',
+                                         pd.Grouper(key='Date', freq='M')]).sum().unstack(fill_value=0).stack()
 
-        print(fixed_exp)
-        df_monthly_totals = df
-        df_monthly_totals['Amount'] = df_monthly_totals['Amount'].abs()
-        df_monthly_totals = df_monthly_totals[(df_monthly_totals['Amount'] < 200) & df_monthly_totals['Category'].isin(__var)]
-        df_monthly_totals = df_monthly_totals.groupby(['Category', pd.Grouper(key='Date', freq='M')]).sum()
+        df_mon_var_agg = df_mon_var.groupby(['Combined']).agg(['mean', 'std'])
+        df_mon_var_agg = df_mon_var_agg.fillna(0)
+        df_mon_var_agg['worst'] = df_mon_var_agg['Amount']['mean'] \
+                                  + df_mon_var_agg['Amount']['std'] * .5
+        df_mon_var_agg['best'] = df_mon_var_agg['Amount']['mean'] - \
+                                 df_mon_var_agg['Amount']['std'] * .5
 
-        df_monthly_totals_agg = df_monthly_totals.groupby(['Category']).agg(['mean', 'std'])
-        df_monthly_totals_agg = df_monthly_totals_agg.fillna(0)
-        df_monthly_totals_agg['worst'] = df_monthly_totals_agg['Amount']['mean'] \
-                                                   + df_monthly_totals_agg['Amount']['std'] * .5
-        df_monthly_totals_agg['best'] = df_monthly_totals_agg['Amount']['mean'] - \
-                                                   df_monthly_totals_agg['Amount']['std'] * .5
-        print(df_monthly_totals_agg['Amount']['mean'].sum() + fixed_exp)
-        print(df_monthly_totals_agg['worst'].sum() + fixed_exp)
-        print(df_monthly_totals_agg['best'].sum() + fixed_exp)
+        var_exp_base = df_mon_var_agg['Amount']['mean'].sum()
+        var_exp_worst = df_mon_var_agg['worst'].sum()
+        var_exp_best = df_mon_var_agg['best'].sum()
 
+        df_mon_fix1 = df
+        df_mon_fix1['Amount'] = df_mon_fix1['Amount'].abs()
+        df_mon_fix1 = df_mon_fix1[df_mon_fix1['Combined'].isin(fix1_cat.unique())]
+        df_mon_fix1 = df_mon_fix1.groupby(['Combined',
+                                           pd.Grouper(key='Date', freq='M')]).sum().unstack(fill_value=0).stack()
+        fixed1_exp = df_mon_fix1.groupby(['Combined']).agg(['mean']).sum()
 
+        best = var_exp_best + fixed1_exp
+        base = var_exp_base + fixed1_exp
+        worst = var_exp_worst + fixed1_exp
+        scenarios = {'best': best.to_list()[0], 'base': base.to_list()[0], 'worst': worst.to_list()[0]}
 
+        df_group = return_balance().groupby(pd.Grouper(key='Date', freq='M'))['Account Balance'].agg(['sum'])
 
-        return {'data': None, 'layout': None}
+        actual = go.Scatter(x=df_group.index.strftime('%b-%Y'),
+                            y=df_group['sum'].abs(),
+                            name='Actual')
+
+        traces = [actual]
+        for scenario in scenarios.keys():
+            trace = go.Scatter(x=['Apr-2020', 'May-2020', 'Jun-2020', 'Jul-2020'],
+                               y=[17105.46, 15390.46, 13353.46, 11316.46],
+                               name=scenario)
+            traces.append(trace)
+
+        return {'data': traces, 'layout': None}
