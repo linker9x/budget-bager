@@ -342,7 +342,7 @@ def register_callbacks(app):
         # df_pnc = df[(df['Source'] == 'PNC') & (df['Category'] == 'PAYMENT')].groupby(pd.Grouper(key='Date', freq='M')).sum()
         # print(df_pnc)
 
-        df_mon_var = df
+        df_mon_var = df.copy()
         df_mon_var['Amount'] = df_mon_var['Amount'].abs()
         df_mon_var = df_mon_var[(df_mon_var['Amount'] < 200) &
                                 df_mon_var['Combined'].isin(var_cat.unique())]
@@ -372,7 +372,7 @@ def register_callbacks(app):
         worst = var_exp_worst + fixed1_exp
         scenarios = {'best': best.to_list()[0], 'base': base.to_list()[0], 'worst': worst.to_list()[0]}
 
-        df_group = return_balance().groupby(pd.Grouper(key='Date', freq='M'))['Account Balance'].agg(['sum'])
+        df_group = return_balance(start_date, end_date).groupby(pd.Grouper(key='Date', freq='M'))['Account Balance'].agg(['sum'])
         last_month = df_group.tail(1)
         forecast = {last_month.index[0]: last_month['sum'].to_list()[0]}
 
@@ -384,9 +384,8 @@ def register_callbacks(app):
                 temp_dict[key] = last_month['sum'].to_list()[0] - (scenarios[key] * (i + 1))
 
             forecast[fore_date] = temp_dict
-
         df_forecast = pd.DataFrame(forecast).T
-        print(df_forecast)
+
         actual = go.Scatter(x=df_group.index.strftime('%b-%Y'),
                             y=df_group['sum'].abs(),
                             name='Actual')

@@ -66,8 +66,10 @@ def update_p3_table_df(start_date_string, end_date_string, categories, mode):
     return df_sub.to_dict("rows")
 
 
-def return_balance():
-    return df_balance
+def return_balance(start_date_string, end_date_string):
+    df_sub = copy.deepcopy(df_balance)
+    df_sub = df_sub[(df_sub['Date'] >= start_date_string) & (df_sub['Date'] <= end_date_string)].reset_index(drop=True)
+    return df_sub
 
 
 def return_budget():
