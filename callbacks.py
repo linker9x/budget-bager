@@ -16,8 +16,8 @@ __fixed_cat = ['CAR', 'HEALTHCARE', 'FITNESS', 'PHONE']
 __var_cat = ['AMAZON', 'TRAVEL', 'PERSONAL', 'SHOPPING', 'ENTERTAINMENT', 'CATS',
              'GROCERIES', 'RESTAURANT', 'GAS']
 
-def register_callbacks(app):
 
+def register_callbacks(app):
     # callback to switch page content
     @app.callback(Output('page-content', 'children'),
                   [Input('url', 'pathname')])
@@ -34,6 +34,91 @@ def register_callbacks(app):
             return page4
         else:
             return None
+
+    # callback to switch page content
+    @app.callback(Output('home-groc-gauge', 'figure'),
+                  [Input('home-var-dropdown', 'value')])
+    def update_gauge(cat):
+        data = go.Indicator(
+            mode="gauge+number+delta",
+            value=420,
+            title={'text': "Speed", 'font': {'size': 24}},
+            delta={'reference': 400, 'increasing': {'color': "RebeccaPurple"}}, #change triangle
+            gauge={
+                'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                'bar': {'color': "darkblue"},
+                'bgcolor': "white",
+                'borderwidth': 1, # of the curve
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, 250], 'color': 'cyan'},
+                    {'range': [250, 400], 'color': 'royalblue'}],
+            })
+        return {'data': [data], 'layout': None}
+
+
+    # callback to switch page content
+    @app.callback(Output('home-pers-gauge', 'figure'),
+                  [Input('home-var-dropdown', 'value')])
+    def update_gauge(cat):
+        data = go.Indicator(
+            mode="gauge+number+delta",
+            value=420,
+            title={'text': "Speed", 'font': {'size': 24}},
+            delta={'reference': 400, 'increasing': {'color': "RebeccaPurple"}}, #change triangle
+            gauge={
+                'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                'bar': {'color': "darkblue"},
+                'bgcolor': "white",
+                'borderwidth': 1, # of the curve
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, 250], 'color': 'cyan'},
+                    {'range': [250, 400], 'color': 'royalblue'}],
+            })
+        return {'data': [data], 'layout': None}
+
+    # callback to switch page content
+    @app.callback(Output('home-res-gauge', 'figure'),
+                  [Input('home-var-dropdown', 'value')])
+    def update_gauge(cat):
+        data = go.Indicator(
+            mode="gauge+number+delta",
+            value=420,
+            title={'text': "Speed", 'font': {'size': 24}},
+            delta={'reference': 400, 'increasing': {'color': "RebeccaPurple"}}, #change triangle
+            gauge={
+                'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                'bar': {'color': "darkblue"},
+                'bgcolor': "white",
+                'borderwidth': 1, # of the curve
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, 250], 'color': 'cyan'},
+                    {'range': [250, 400], 'color': 'royalblue'}],
+            })
+        return {'data': [data], 'layout': None}
+
+    # callback to switch page content
+    @app.callback(Output('home-shop-gauge', 'figure'),
+                  [Input('home-var-dropdown', 'value')])
+    def update_gauge(cat):
+        data = go.Indicator(
+            mode="gauge+number+delta",
+            value=420,
+            title={'text': "Speed", 'font': {'size': 24}},
+            delta={'reference': 400, 'increasing': {'color': "RebeccaPurple"}}, #change triangle
+            gauge={
+                'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                'bar': {'color': "darkblue"},
+                'bgcolor': "white",
+                'borderwidth': 1, # of the curve
+                'bordercolor': "gray",
+                'steps': [
+                    {'range': [0, 250], 'color': 'cyan'},
+                    {'range': [250, 400], 'color': 'royalblue'}],
+            })
+        return {'data': [data], 'layout': None}
 
     # P1 - Date Picker Callback
     @app.callback(Output('descrip-date', 'children'),
@@ -388,7 +473,7 @@ def register_callbacks(app):
 
         actual = go.Scatter(x=df_group.index.strftime('%b-%Y'),
                             y=df_group['sum'].abs(),
-                            name='Actual')
+                            name='actual')
 
         traces = [actual]
         for key in scenarios:

@@ -15,8 +15,30 @@ __fixed_cat = ['CAR', 'HEALTHCARE', 'FITNESS', 'PHONE']
 __var_cat = ['AMAZON', 'TRAVEL', 'PERSONAL', 'SHOPPING', 'ENTERTAINMENT', 'CATS',
              'GROCERIES', 'RESTAURANT', 'GAS']
 
-home = html.Div([header.Header(),
-    html.H1('home')
+home = html.Div([
+    html.Div([
+            # HEADER
+            header.Header(),
+            # PAGE NAME
+            html.Div([
+                html.H6(['Home'], className="bb-header", style={'marginTop': 10})
+            ])
+    ]),
+    html.Div([
+        dcc.Dropdown(
+            options=[{'label': '{}'.format(cat), 'value': cat} for cat in __var_cat],
+            value='SHOPPING',
+            multi=False,
+            id='home-var-dropdown'
+        )
+    ]),
+    html.Div([
+        html.Div([dcc.Graph(id='home-groc-gauge')]),
+        html.Div([dcc.Graph(id='home-pers-gauge')]),
+        html.Div([dcc.Graph(id='home-res-gauge')]),
+        html.Div([dcc.Graph(id='home-shop-gauge')]),
+    ])
+
 ])
 
 page4 = html.Div([
