@@ -33,10 +33,7 @@ home = html.Div([
         )
     ]),
     html.Div([
-        html.Div([dcc.Graph(id='home-groc-gauge')]),
-        html.Div([dcc.Graph(id='home-pers-gauge')]),
-        html.Div([dcc.Graph(id='home-res-gauge')]),
-        html.Div([dcc.Graph(id='home-shop-gauge')]),
+        html.Div([dcc.Graph(id='home-gauge')])
     ])
 
 ])

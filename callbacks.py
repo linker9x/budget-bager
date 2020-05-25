@@ -2,11 +2,12 @@ import dash
 from dash.dependencies import Input, Output, State
 from layouts import home, page1, page2, page3, page4
 from components.functions import update_datatable, update_period_df, update_p3_table_df, update_period_df_all, \
-    return_balance, return_budget
+    return_balance, return_budget, return_df
 from datetime import datetime
 from datetime import date, timedelta
 from dateutil.relativedelta import *
 import plotly.graph_objs as go
+from plotly.subplots import make_subplots
 import pandas as pd
 import numpy as np
 import copy
@@ -36,89 +37,67 @@ def register_callbacks(app):
             return None
 
     # callback to switch page content
-    @app.callback(Output('home-groc-gauge', 'figure'),
+    @app.callback(Output('home-gauge', 'figure'),
                   [Input('home-var-dropdown', 'value')])
     def update_gauge(cat):
-        data = go.Indicator(
-            mode="gauge+number+delta",
-            value=420,
-            title={'text': "Speed", 'font': {'size': 24}},
-            delta={'reference': 400, 'increasing': {'color': "RebeccaPurple"}}, #change triangle
-            gauge={
-                'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                'bar': {'color': "darkblue"},
-                'bgcolor': "white",
-                'borderwidth': 1, # of the curve
-                'bordercolor': "gray",
-                'steps': [
-                    {'range': [0, 250], 'color': 'cyan'},
-                    {'range': [250, 400], 'color': 'royalblue'}],
-            })
-        return {'data': [data], 'layout': None}
+        bdgt_amt = return_budget()
+        bdgt_amt_var = bdgt_amt[bdgt_amt['Type'] == 'VAR']
+        var_cat = bdgt_amt_var['Category'] + ' ' + bdgt_amt_var['Subcategory']
+        var_exp = var_cat.unique()
 
+        df = copy.deepcopy(return_df())
+        df['Combined'] = df['Category'] + ' ' + df['Subcategory']
+        df_grouped = df[(df['Amount'] < 0) &
+                        df['Combined'].isin(var_exp)].groupby(['Combined', pd.Grouper(key='Date', freq='M')]).sum()
+        df_grouped = df_grouped.unstack(fill_value=0).stack().reset_index()
 
-    # callback to switch page content
-    @app.callback(Output('home-pers-gauge', 'figure'),
-                  [Input('home-var-dropdown', 'value')])
-    def update_gauge(cat):
-        data = go.Indicator(
-            mode="gauge+number+delta",
-            value=420,
-            title={'text': "Speed", 'font': {'size': 24}},
-            delta={'reference': 400, 'increasing': {'color': "RebeccaPurple"}}, #change triangle
-            gauge={
-                'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                'bar': {'color': "darkblue"},
-                'bgcolor': "white",
-                'borderwidth': 1, # of the curve
-                'bordercolor': "gray",
-                'steps': [
-                    {'range': [0, 250], 'color': 'cyan'},
-                    {'range': [250, 400], 'color': 'royalblue'}],
-            })
-        return {'data': [data], 'layout': None}
+        prev_EOM = df_grouped['Date'].unique()[-1]
+        prev_EOM = datetime.strptime(str(prev_EOM)[:10], '%Y-%m-%d')
+        prev_EOM = prev_EOM.strftime('%Y-%m-%d')
 
-    # callback to switch page content
-    @app.callback(Output('home-res-gauge', 'figure'),
-                  [Input('home-var-dropdown', 'value')])
-    def update_gauge(cat):
-        data = go.Indicator(
-            mode="gauge+number+delta",
-            value=420,
-            title={'text': "Speed", 'font': {'size': 24}},
-            delta={'reference': 400, 'increasing': {'color': "RebeccaPurple"}}, #change triangle
-            gauge={
-                'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                'bar': {'color': "darkblue"},
-                'bgcolor': "white",
-                'borderwidth': 1, # of the curve
-                'bordercolor': "gray",
-                'steps': [
-                    {'range': [0, 250], 'color': 'cyan'},
-                    {'range': [250, 400], 'color': 'royalblue'}],
-            })
-        return {'data': [data], 'layout': None}
+        pprev_EOM = df_grouped['Date'].unique()[-2]
+        pprev_EOM = datetime.strptime(str(pprev_EOM)[:10], '%Y-%m-%d')
+        pprev_EOM = pprev_EOM.strftime('%Y-%m-%d')
 
-    # callback to switch page content
-    @app.callback(Output('home-shop-gauge', 'figure'),
-                  [Input('home-var-dropdown', 'value')])
-    def update_gauge(cat):
-        data = go.Indicator(
-            mode="gauge+number+delta",
-            value=420,
-            title={'text': "Speed", 'font': {'size': 24}},
-            delta={'reference': 400, 'increasing': {'color': "RebeccaPurple"}}, #change triangle
-            gauge={
-                'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
-                'bar': {'color': "darkblue"},
-                'bgcolor': "white",
-                'borderwidth': 1, # of the curve
-                'bordercolor': "gray",
-                'steps': [
-                    {'range': [0, 250], 'color': 'cyan'},
-                    {'range': [250, 400], 'color': 'royalblue'}],
-            })
-        return {'data': [data], 'layout': None}
+        df_gauge = df_grouped[(df_grouped['Date'] >= pprev_EOM) &
+                              (df_grouped['Date'] <= prev_EOM)].reset_index(drop=True)
+
+        # print(len(var_exp))
+        fig = make_subplots(
+            rows=6, cols=2,
+            specs=[[{"type": "indicator"}, {"type": "indicator"}],
+                   [{"type": "indicator"}, {"type": "indicator"}],
+                   [{"type": "indicator"}, {"type": "indicator"}],
+                   [{"type": "indicator"}, {"type": "indicator"}],
+                   [{"type": "indicator"}, {"type": "indicator"}],
+                   [{"type": "indicator"}, {"type": "indicator"}]],
+        )
+
+        for i in range(6):
+            print('i:{}'.format(i))
+            for j in range(2):
+                print('j:{}'.format(j))
+                fig.add_trace(go.Indicator(
+                    mode="gauge+number+delta",
+                    value=420,
+                    title={'text': "Speed", 'font': {'size': 24}},
+                    delta={'reference': 400, 'increasing': {'color': "RebeccaPurple"}}, #change triangle
+                    gauge={
+                        'shape': "bullet",
+                        'axis': {'range': [None, 500], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                        'bar': {'color': "darkblue"},
+                        'bgcolor': "white",
+                        'borderwidth': 1, # of the curve
+                        'bordercolor': "gray",
+                        'steps': [
+                            {'range': [0, 250], 'color': 'cyan'},
+                            {'range': [250, 400], 'color': 'royalblue'}],
+                    }),
+                              row=i+1, col=j+1)
+
+        fig.update_layout(height=600, showlegend=False)
+
+        return fig
 
     # P1 - Date Picker Callback
     @app.callback(Output('descrip-date', 'children'),
