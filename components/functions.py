@@ -76,5 +76,32 @@ def return_balance(start_date_string, end_date_string):
     return df_sub
 
 
-def return_budget():
-    return df_budget
+def calc_gauge_vals(type):
+    type ='VAR' if type == 'VAR' else 'FIX'
+
+    df_bdgt_amt = copy.deepcopy(df_budget)
+    df_bdgt_amt['Combined'] = df_bdgt_amt['Category'] + ' ' + df_bdgt_amt['Subcategory']
+    df_bdgt_exp = df_bdgt_amt[df_bdgt_amt['Type'] == type]
+
+    expenses = df_bdgt_exp['Combined'].unique()
+
+    df = copy.deepcopy(return_df())
+    df['Combined'] = df['Category'] + ' ' + df['Subcategory']
+    df_act_exp = df[(df['Amount'] < 0) &
+                    df['Combined'].isin(expenses)].groupby(['Combined', pd.Grouper(key='Date', freq='M')]).sum()
+    df_act_exp = df_act_exp.unstack(fill_value=0).stack().reset_index()
+
+    prev_EOM = df_act_exp['Date'].unique()[-1]
+    prev_EOM = datetime.strptime(str(prev_EOM)[:10], '%Y-%m-%d')
+    prev_EOM = prev_EOM.strftime('%Y-%m-%d')
+
+    pprev_EOM = df_act_exp['Date'].unique()[-2]
+    pprev_EOM = datetime.strptime(str(pprev_EOM)[:10], '%Y-%m-%d')
+    pprev_EOM = pprev_EOM.strftime('%Y-%m-%d')
+
+    act_exp = df_act_exp[(df_act_exp['Date'] == prev_EOM)]['Amount'].sum() * -1
+    prev_act_exp = df_act_exp[(df_act_exp['Date'] == pprev_EOM)]['Amount'].sum() * -1
+
+    mon_bdgt_exp = df_bdgt_exp['Amount'].sum()
+
+    return act_exp, prev_act_exp, mon_bdgt_exp
