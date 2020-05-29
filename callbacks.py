@@ -1,8 +1,9 @@
 import dash
 from dash.dependencies import Input, Output, State
+import dash_html_components as html
+
 from layouts import home, page1, page2, page3, page4
-from components.functions import update_datatable, update_period_df, update_p3_table_df, update_period_df_all, \
-    return_balance, return_df, calc_gauge_vals
+from components.functions import *
 from datetime import datetime
 from datetime import date, timedelta
 from dateutil.relativedelta import *
@@ -36,7 +37,19 @@ def register_callbacks(app):
         else:
             return None
 
-    # callback to switch page content
+
+    # HOME - TABLES
+    @app.callback(Output('var-summary-table', 'data'),
+                  [Input('home-var-dropdown', 'value')])
+    def update_var_summary(val):
+        return update_summary_table('VAR')
+
+    @app.callback(Output('fix-summary-table', 'data'),
+                  [Input('home-var-dropdown', 'value')])
+    def update_var_summary(val):
+        return update_summary_table('FIX')
+
+    # HOME - GAUGES
     @app.callback(Output('home-gauge', 'figure'),
                   [Input('home-var-dropdown', 'value')])
     def update_gauge(cat):
@@ -48,12 +61,12 @@ def register_callbacks(app):
             specs=[[{"type": "indicator"}, {"type": "indicator"}]]
         )
 
-        # FIXED INDICATOR
+        # FIXED GAUGE
         fig.add_trace(go.Indicator(
             mode="gauge+number+delta",
             value=var_act_exp,
             title={'text': "Variable EXP", 'font': {'size': 24}},
-            delta={'reference': var_prev_act_exp, 'increasing': {'color': "#3333FF"}}, #change triangle
+            delta={'reference': var_prev_act_exp}, #change triangle
             gauge={
                 'axis': {'range': [None, var_mon_bdgt_exp + 1000], 'tickwidth': 1, 'tickcolor': "darkblue"},
                 'bar': {'color': "white"},
@@ -68,12 +81,12 @@ def register_callbacks(app):
             }),
                       row=1, col=1)
 
-        # VARIABLE INDICATOR
+        # VARIABLE GAUGE
         fig.add_trace(go.Indicator(
             mode="gauge+number+delta",
             value=fix_act_exp,
             title={'text': "Fixed EXP", 'font': {'size': 24}},
-            delta={'reference': fix_prev_act_exp, 'increasing': {'color': "#3333FF"}},  # change triangle
+            delta={'reference': fix_prev_act_exp},  # change triangle
             gauge={
                 'axis': {'range': [None, fix_mon_bdgt_exp + 1000], 'tickwidth': 1, 'tickcolor': "darkblue"},
                 'bar': {'color': "white"},
@@ -92,41 +105,30 @@ def register_callbacks(app):
 
         return fig
 
-    # P1 - Date Picker Callback
-    @app.callback(Output('descrip-date', 'children'),
-                  [Input('stat-date-picker', 'start_date'),
-                   Input('stat-date-picker', 'end_date')])
-    def update_output(start_date, end_date):
-        if start_date is not None:
-            start_date = datetime.strptime(start_date[:10], '%Y-%m-%d')
-            start_date_string = start_date.strftime('%B %d, %Y')
-            string_prefix = 'Start Date: ' + start_date_string + '| '
-        if end_date is not None:
-            end_date = datetime.strptime(end_date[:10], '%Y-%m-%d')
-            end_date_string = end_date.strftime('%B %d, %Y')
-            days_selected = (end_date - start_date).days
-            prior_start_date = start_date - timedelta(days_selected + 1)
-            prior_start_date_string = datetime.strftime(prior_start_date, '%B %d, %Y')
-            prior_end_date = end_date - timedelta(days_selected + 1)
-            prior_end_date_string = datetime.strftime(prior_end_date, '%B %d, %Y')
-            string_prefix = string_prefix + 'End Date: ' + end_date_string + '| Period Length: ' + str(
-                days_selected + 1) + ' Days'
-        if len(string_prefix) == len('You have selected: '):
-            return 'Select a date to see it displayed here'
-        else:
-            return string_prefix
-
-    # P1 - Table Callback
-    @app.callback(Output('stat-datatable', 'data'),
+    # P1 - Update Table, Description, CNT and SUM
+    @app.callback([Output('stat-datatable', 'data'),
+                   Output('count-sum-text', 'children'),
+                   Output('descrip-date', 'children')],
                   [Input('stat-date-picker', 'start_date'),
                    Input('stat-date-picker', 'end_date'),
                    Input('cat-dropdown', 'value'),
                    Input('acc-checklist', 'value')])
-    def update_data_1(start_date, end_date, categories, accounts):
+    def update_p1_table(start_date, end_date, categories, accounts):
         data_1 = update_datatable(start_date, end_date, categories, accounts)
-        return data_1
 
-    # P2 - Area Graph
+        disp_text = 'Number of Rows:' + str(len(data_1)) + ' | ' + \
+                    'Sum of Rows:' + str(data_1['Amount'].sum())
+
+        start_date_string, end_date_string = convert_picker_dates(start_date, end_date)
+        days_selected = (datetime.strptime(end_date[:10], '%Y-%m-%d') -
+                         datetime.strptime(start_date[:10], '%Y-%m-%d')).days
+        string_prefix = 'Start Date: ' + start_date_string + \
+                        '| End Date: ' + end_date_string + \
+                        '| Period Length: ' + str(days_selected + 1) + ' Days'
+
+        return[data_1.to_dict("rows"), disp_text, string_prefix]
+
+    # P2 - Expenses/Income Area Graph
     @app.callback(Output('in-out-area-graph', 'figure'),
                   [Input('p2-date-picker', 'start_date'),
                    Input('p2-date-picker', 'end_date')])
@@ -141,7 +143,7 @@ def register_callbacks(app):
                            fill='tonexty'),
                 go.Scatter(x=[mon.strftime('%B') for mon in df_out.index],
                            y=df_out['Amount'].abs(),
-                           name='EXPENSE',
+                           name='EXPENSES',
                            fill='tonexty')]
         layout = go.Layout()
         return {'data': data, 'layout': None}
@@ -151,16 +153,17 @@ def register_callbacks(app):
                   [Input('p2-date-picker', 'start_date'),
                    Input('p2-date-picker', 'end_date')])
     def update_p2_stacked(start_date, end_date):
-        df = update_period_df(start_date, end_date)
-        data = []
-        order = df.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum']).index.strftime('%b-%Y')
+        df_period = update_period_df(start_date, end_date)
+        order = agg_by_month(start_date, end_date).index.strftime('%b-%Y')
+        total_exp = get_var_exp()
 
-        for cat in __fixed_cat + __var_cat:
-            df_cat = df[df['Category'] == cat].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
+        data = []
+        for cat in total_exp:
+            df_cat = df_period[df_period['Combined'] == cat].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
 
             trace = go.Bar(x=df_cat.index.strftime('%b-%Y'),
                            y=df_cat['sum'].abs(),
-                           name=cat)
+                           name=cat.split()[0] + ' (' + cat.split()[1] + ')')
             data.append(trace)
 
         layout = go.Layout(barmode='stack', xaxis={'categoryorder': 'array', 'categoryarray': order})
@@ -171,9 +174,10 @@ def register_callbacks(app):
                   [Input('p2-date-picker', 'start_date'),
                    Input('p2-date-picker', 'end_date')])
     def update_p2_fixed(start_date, end_date):
-        df = update_period_df(start_date, end_date)
-        df_cat = df.groupby('Category')['Amount'].agg(['sum'])
-        df_fixed = df_cat[df_cat.index.isin(__fixed_cat)]
+        df_period = update_period_df(start_date, end_date)
+        df_cat = df_period.groupby('Combined')['Amount'].agg(['sum'])
+        fix_cat = get_fix_exp()
+        df_fixed = df_cat[df_cat.index.isin(fix_cat)]
 
         data = [go.Pie(labels=df_fixed.index, values=df_fixed['sum'].abs())]
         layout = go.Layout()
@@ -184,9 +188,10 @@ def register_callbacks(app):
                   [Input('p2-date-picker', 'start_date'),
                    Input('p2-date-picker', 'end_date')])
     def update_p2_var(start_date, end_date):
-        df = update_period_df(start_date, end_date)
-        df_cat = df.groupby('Category')['Amount'].agg(['sum'])
-        df_var = df_cat[df_cat.index.isin(__var_cat)]
+        df_period = update_period_df(start_date, end_date)
+        df_cat = df_period.groupby('Combined')['Amount'].agg(['sum'])
+        var_cat = get_var_exp()
+        df_var = df_cat[df_cat.index.isin(var_cat)]
 
         data = [go.Pie(labels=df_var.index, values=df_var['sum'].abs())]
         layout = go.Layout()

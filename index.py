@@ -44,7 +44,7 @@ register_callbacks(app)
 #                 "https://codepen.io/bcd/pen/KQrXdb.css",
 #                 "https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css",
 #                 "https://codepen.io/dmcomfort/pen/JzdzEZ.css"]
-
+#
 # for css in external_css:
 #     app.css.append_css({"external_url": css})
 

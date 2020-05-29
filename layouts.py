@@ -1,5 +1,6 @@
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_bootstrap_components as dbc
 import dash_table
 from components import header
 from datetime import datetime as dt
@@ -14,6 +15,13 @@ df['Date'] = pd.to_datetime(df['Date'])
 __fixed_cat = ['CAR', 'HEALTHCARE', 'FITNESS', 'PHONE']
 __var_cat = ['AMAZON', 'TRAVEL', 'PERSONAL', 'SHOPPING', 'ENTERTAINMENT', 'CATS',
              'GROCERIES', 'RESTAURANT', 'GAS']
+
+df_test = pd.DataFrame(
+    {
+        "First Name": ["Arthur", "Ford", "Zaphod", "Trillian"],
+        "Last Name": ["Winkler", "Prefect", "Beeblebrox", "Astra"],
+    }
+)
 
 home = html.Div([
     html.Div([
@@ -34,8 +42,41 @@ home = html.Div([
     ]),
     html.Div([
         html.Div([dcc.Graph(id='home-gauge')])
+    ]),
+    html.Div([
+        dash_table.DataTable(id='var-summary-table',
+                             columns=[{"name": 'Category', "id": 'Category'},
+                                      {"name": 'Subcategory', "id": 'Subcategory'},
+                                      {"name": 'Budget', "id": 'Budget'},
+                                      {"name": 'Actual', "id": 'Actual'},
+                                      {"name": 'Diff', "id": 'Diff'}],
+                             style_header={'fontWeight': 'bold',
+                                           'border': '1px solid #333333'},
+                             style_cell={'font-family': 'Arial',
+                                         'border': '1px solid grey'},
+                             style_data_conditional=[{'if': {'filter_query': '{Diff} >= 0'},
+                                                      'color': 'green'},
+                                                     {'if': {'filter_query': '{Diff} < 0'},
+                                                      'color': 'tomato',
+                                                      'fontWeight': 'bold'}]
+                             ),
+        dash_table.DataTable(id='fix-summary-table',
+                             columns=[{"name": 'Category', "id": 'Category'},
+                                      {"name": 'Subcategory', "id": 'Subcategory'},
+                                      {"name": 'Budget', "id": 'Budget'},
+                                      {"name": 'Actual', "id": 'Actual'},
+                                      {"name": 'Diff', "id": 'Diff'}],
+                             style_header={'fontWeight': 'bold',
+                                           'border': '1px solid #333333'},
+                             style_cell={'font-family': 'Arial',
+                                         'border': '1px solid grey'},
+                             style_data_conditional=[{'if': {'filter_query': '{Diff} >= 0'},
+                                                      'color': 'green'},
+                                                     {'if': {'filter_query': '{Diff} < 0'},
+                                                      'color': 'tomato',
+                                                      'fontWeight': 'bold'}]
+),
     ])
-
 ])
 
 page4 = html.Div([
@@ -193,7 +234,7 @@ page1 = html.Div([
                 ),
                 dcc.Dropdown(
                     options=[{'label': '{}'.format(cat), 'value': cat} for cat in df['Category'].unique()],
-                    value=df['Category'].unique(),
+                    value=['AMAZON'],
                     multi=True,
                     id='cat-dropdown'
                 )
@@ -209,6 +250,7 @@ page1 = html.Div([
                 id='acc-checklist'
             )
         ]),
+        html.Div(id='count-sum-text'),
         # TABLE
         html.Div([
             dash_table.DataTable(
