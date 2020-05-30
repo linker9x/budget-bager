@@ -14,13 +14,16 @@ df = pd.concat([df_pnc, df_chase]).reset_index(drop=True).sort_values(by=['Date'
 df['Date'] = pd.to_datetime(df['Date'])
 df['Combined'] = df['Category'] + ' ' + df['Subcategory']
 
-__fix_exp = df_budget[df_budget['Type'] == 'FIX']['Combined'].unique()
-__var_exp = df_budget[df_budget['Type'] == 'VAR']['Combined'].unique()
+__fix_exp = df_budget[df_budget['Type'] == 'FIX']['Combined'].unique().tolist()
+__var_exp = df_budget[df_budget['Type'] == 'VAR']['Combined'].unique().tolist()
 
-df_exp_tot_by_month = df[(df['Amount'] < 0) &
-                         ((df['Combined'].isin(__fix_exp)) |
-                          (df['Combined'].isin(__var_exp)))].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
+df_exp_tot_by_month = df[(df['Combined'].isin(__fix_exp + __var_exp))].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
 
+df_exp_fix_by_month = df[(df['Amount'] < 0) & (df['Combined'].isin(__fix_exp))].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
+
+df_exp_var_by_month = df[(df['Amount'] < 0) & (df['Combined'].isin(__var_exp))].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
+
+df_cat_tot_by_month = df.groupby(['Combined', pd.Grouper(key='Date', freq='M')])['Amount'].agg(['sum']).unstack(fill_value=0).stack()
 
 
 def convert_picker_dates(start_date, end_date):
@@ -184,9 +187,40 @@ def agg_by_month(start_date, end_date):
     return df_filtered
 
 
+def agg_fix_by_month(start_date, end_date):
+    start_date_str, end_date_str = convert_picker_dates(start_date, end_date)
+    df_filtered = df_exp_fix_by_month[(df_exp_fix_by_month.index >= start_date_str) &
+                                      (df_exp_fix_by_month.index <= end_date_str)]
+    return df_filtered
+
+
+def agg_var_by_month(start_date, end_date):
+    start_date_str, end_date_str = convert_picker_dates(start_date, end_date)
+    df_filtered = df_exp_var_by_month[(df_exp_var_by_month.index >= start_date_str) &
+                                      (df_exp_var_by_month.index <= end_date_str)]
+    return df_filtered
+
+
+def agg_by_cat_month():
+    return copy.deepcopy(df_cat_tot_by_month)
+
+
 def get_fix_exp():
-    return list(__fix_exp)
+    return __fix_exp
+
+
+def update_p2_varfix_table(start_date, end_date):
+    df_var = agg_var_by_month(start_date, end_date)
+    df_fixed = agg_fix_by_month(start_date, end_date)
+
+    df_merged = df_var.join(df_fixed, how='outer', lsuffix='_var', rsuffix='_fix')
+    df_merged = df_merged.fillna(0).reset_index()
+    df_merged['Total'] = df_merged['sum_var'] + df_merged['sum_fix']
+    df_merged['Date'] = df_merged["Date"].dt.strftime('%b-%Y')
+    df_merged.rename(columns={'Date': 'Month', 'sum_var': 'Variable', 'sum_fix': 'Fixed'}, inplace=True)
+
+    return df_merged
 
 
 def get_var_exp():
-    return list(__var_exp)
+    return __var_exp

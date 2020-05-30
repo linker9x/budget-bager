@@ -37,6 +37,11 @@ def register_callbacks(app):
         else:
             return None
 
+    #######################
+    #
+    # HOME
+    #
+    #######################
 
     # HOME - TABLES
     @app.callback(Output('var-summary-table', 'data'),
@@ -105,6 +110,12 @@ def register_callbacks(app):
 
         return fig
 
+    #######################
+    #
+    # PAGE 1
+    #
+    #######################
+
     # P1 - Update Table, Description, CNT and SUM
     @app.callback([Output('stat-datatable', 'data'),
                    Output('count-sum-text', 'children'),
@@ -128,14 +139,20 @@ def register_callbacks(app):
 
         return[data_1.to_dict("rows"), disp_text, string_prefix]
 
+    #######################
+    #
+    # PAGE 2
+    #
+    #######################
+
     # P2 - Expenses/Income Area Graph
     @app.callback(Output('in-out-area-graph', 'figure'),
                   [Input('p2-date-picker', 'start_date'),
                    Input('p2-date-picker', 'end_date')])
     def update_p2_area_graph(start_date, end_date):
-        df = update_period_df(start_date, end_date)
-        df_in = df[df['Amount'] >= 0].groupby(pd.Grouper(key='Date', freq='M')).sum()
-        df_out = df[df['Amount'] < 0].groupby(pd.Grouper(key='Date', freq='M')).sum()
+        df_per = update_period_df(start_date, end_date)
+        df_in = df_per[df_per['Amount'] >= 0].groupby(pd.Grouper(key='Date', freq='M')).sum()
+        df_out = df_per[df_per['Amount'] < 0].groupby(pd.Grouper(key='Date', freq='M')).sum()
 
         data = [go.Scatter(x=[mon.strftime('%B') for mon in df_in.index],
                            y=df_in['Amount'],
@@ -148,56 +165,65 @@ def register_callbacks(app):
         layout = go.Layout()
         return {'data': data, 'layout': None}
 
-    # P2 - Stacked Bar Graph
-    @app.callback(Output('fixed-var-stacked', 'figure'),
+    # P2 - Expenses Stacked Bar Graph
+    @app.callback(Output('exp-stacked', 'figure'),
                   [Input('p2-date-picker', 'start_date'),
-                   Input('p2-date-picker', 'end_date')])
-    def update_p2_stacked(start_date, end_date):
+                   Input('p2-date-picker', 'end_date'),
+                   Input('p2-exp-radio', 'value')])
+    def update_p2_stacked(start_date, end_date, type):
         df_period = update_period_df(start_date, end_date)
         order = agg_by_month(start_date, end_date).index.strftime('%b-%Y')
-        total_exp = get_var_exp()
+
+        if type == 'FIX':
+            exp_cat = get_fix_exp()
+        else:
+            exp_cat = get_var_exp()
 
         data = []
-        for cat in total_exp:
-            df_cat = df_period[df_period['Combined'] == cat].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
+        for cat in exp_cat:
+            df_cat = df_period[(df_period['Amount'] < 0) &
+                               (df_period['Combined'] == cat)].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
 
             trace = go.Bar(x=df_cat.index.strftime('%b-%Y'),
                            y=df_cat['sum'].abs(),
-                           name=cat.split()[0] + ' (' + cat.split()[1] + ')')
+                           name=cat.split()[0].capitalize() + ' (' + cat.split()[1].capitalize() + ')')
             data.append(trace)
 
         layout = go.Layout(barmode='stack', xaxis={'categoryorder': 'array', 'categoryarray': order})
         return {'data': data, 'layout': layout}
 
-    # P2 - Fixed Pie
-    @app.callback(Output('fixed-pie', 'figure'),
+    # P2 - Expenses Pie
+    @app.callback(Output('exp-pie', 'figure'),
                   [Input('p2-date-picker', 'start_date'),
-                   Input('p2-date-picker', 'end_date')])
-    def update_p2_fixed(start_date, end_date):
+                   Input('p2-date-picker', 'end_date'),
+                   Input('p2-exp-radio', 'value')])
+    def update_p2_var(start_date, end_date, type):
         df_period = update_period_df(start_date, end_date)
-        df_cat = df_period.groupby('Combined')['Amount'].agg(['sum'])
-        fix_cat = get_fix_exp()
-        df_fixed = df_cat[df_cat.index.isin(fix_cat)]
+        df_cat = df_period[df_period['Amount'] < 0].groupby('Combined')['Amount'].agg(['sum'])
+        if type == 'FIX':
+            exp_cat = get_fix_exp()
+        else:
+            exp_cat = get_var_exp()
+        df_exp = df_cat[df_cat.index.isin(exp_cat)]
 
-        data = [go.Pie(labels=df_fixed.index, values=df_fixed['sum'].abs())]
+        data = [go.Pie(labels=df_exp.index, values=df_exp['sum'].abs())]
         layout = go.Layout()
         return {'data': data, 'layout': None}
 
-    # P2 - Var Pie
-    @app.callback(Output('var-pie', 'figure'),
+    # P2 - Expenses Stacked Bar Graph
+    @app.callback(Output('p2-exp-datatable', 'data'),
                   [Input('p2-date-picker', 'start_date'),
                    Input('p2-date-picker', 'end_date')])
-    def update_p2_var(start_date, end_date):
-        df_period = update_period_df(start_date, end_date)
-        df_cat = df_period.groupby('Combined')['Amount'].agg(['sum'])
-        var_cat = get_var_exp()
-        df_var = df_cat[df_cat.index.isin(var_cat)]
+    def update_p2_table(start_date, end_date):
+        return update_p2_varfix_table(start_date, end_date).to_dict("rows")
 
-        data = [go.Pie(labels=df_var.index, values=df_var['sum'].abs())]
-        layout = go.Layout()
-        return {'data': data, 'layout': None}
+    #######################
+    #
+    # PAGE 3
+    #
+    #######################
 
-    # P3 - Multi
+    # P3 - Toggle Multi/Mono Mode
     @app.callback(Output('p3-cat-dropdown', 'multi'),
                   [Input('p3-mode-dropdown', 'value')])
     def update_options(mode_value):
@@ -206,6 +232,7 @@ def register_callbacks(app):
         else:
             return False
 
+    # P3 - Drop Down Values
     @app.callback(Output('p3-cat-dropdown', 'value'),
                   [Input('p3-mode-dropdown', 'value')])
     def update_options(mode_value):
@@ -221,12 +248,12 @@ def register_callbacks(app):
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_box(start_date, end_date, categories, mode):
-        df = update_period_df(start_date, end_date)
+        df_period = update_period_df(start_date, end_date)
         data = []
 
         if mode == 'MULTI':
             for cat in categories:
-                trace = go.Box(y=df[df['Category'] == cat]['Amount'].abs(),
+                trace = go.Box(y=df_period[df_period['Category'] == cat]['Amount'].abs(),
                                name=cat)
                 data.append(trace)
 
@@ -235,7 +262,7 @@ def register_callbacks(app):
             end = datetime.strptime(end_date[:10], '%Y-%m-%d').strftime('%m')
 
             for mon in range(int(start), int(end)+1):
-                df_mon = df[df['Date'].dt.month == mon]
+                df_mon = df_period[df_period['Date'].dt.month == mon]
                 trace = go.Box(y=df_mon[df_mon['Category'] == categories]['Amount'].abs(),
                                name=calendar.month_abbr[mon]+'-2020')
                 data.append(trace)
@@ -250,9 +277,9 @@ def register_callbacks(app):
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_bar(start_date, end_date, categories, mode):
-        df = update_period_df(start_date, end_date)
+        df_period = update_period_df(start_date, end_date)
         data = []
-        order = df.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum']).index.strftime('%b-%Y')
+        order = df_period.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum']).index.strftime('%b-%Y')
 
         if mode == 'MULTI':
             for cat in categories:
@@ -371,6 +398,12 @@ def register_callbacks(app):
 
             return update_p3_table_df(start_date, end_date, categories, mode)
         return pd.DataFrame().to_dict('rows')
+
+    #######################
+    #
+    # PAGE 4
+    #
+    #######################
 
     # P4 - Time series
     @app.callback(Output('p4-time-forecast-plot', 'figure'),

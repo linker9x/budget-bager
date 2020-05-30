@@ -197,13 +197,28 @@ page2 = html.Div([
             )
         ]),
         # TOP DIV
-        html.Div([dcc.Graph(id='in-out-area-graph')]),
+        html.Div([
+            html.Div([dcc.Graph(id='in-out-area-graph')]),
+            html.Div([dash_table.DataTable(
+                id='p2-exp-datatable',
+                columns=[{"name": 'Month', "id": 'Month'},
+                         {"name": 'Variable', "id": 'Variable'},
+                         {"name": 'Fixed', "id": 'Fixed'},
+                         {"name": 'Total', "id": 'Total'}],
+                style_table={'maxWidth': '1500px'}
+            )])
+        ]),
         # BOTTOM DIV
         html.Div([
-            # Fixed + Var Graph
-            html.Div([dcc.Graph(id='fixed-var-stacked')]),
-            # Pie charts
-            html.Div([dcc.Graph(id='fixed-pie'), dcc.Graph(id='var-pie')])
+            html.Div([dcc.RadioItems(
+                id='p2-exp-radio',
+                options=[{'label': 'Variable', 'value': 'VAR'},
+                         {'label': 'Fixed', 'value': 'FIX'}],
+                value='VAR')]),
+            # Bar Chart
+            html.Div([dcc.Graph(id='exp-stacked')]),
+            # Pie Chart
+            html.Div([dcc.Graph(id='exp-pie')])
         ])
     ])
 ])
