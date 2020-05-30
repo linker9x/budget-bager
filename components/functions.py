@@ -224,3 +224,55 @@ def update_p2_varfix_table(start_date, end_date):
 
 def get_var_exp():
     return __var_exp
+
+
+def calculate_forecast(start_date, end_date):
+    bdgt_amt = return_budget()
+
+    bdgt_amt_var = bdgt_amt[bdgt_amt['Type'] == 'VAR']
+    var_cat = bdgt_amt_var['Category'] + ' ' + bdgt_amt_var['Subcategory']
+
+    bdgt_amt_fix1 = bdgt_amt[(bdgt_amt['Type'] == 'FIX') & (bdgt_amt['Period'] == 1)]
+    fix1_cat = bdgt_amt_fix1['Category'] + ' ' + bdgt_amt_fix1['Subcategory']
+
+    bdgt_amt_fix6 = bdgt_amt[(bdgt_amt['Period'] == 6)]['Amount'].sum()
+
+    df = update_period_df_all(start_date, end_date)
+    df['Combined'] = df['Category'] + ' ' + df['Subcategory']
+
+    df_mon_var = df.copy()
+    df_mon_var['Amount'] = df_mon_var['Amount'].abs()
+    df_mon_var = df_mon_var[(df_mon_var['Amount'] < 200) &
+                            df_mon_var['Combined'].isin(var_cat.unique())]
+    df_mon_var = df_mon_var.groupby(['Combined',
+                                     pd.Grouper(key='Date', freq='M')]).sum().unstack(fill_value=0).stack()
+
+    df_mon_var_agg = df_mon_var.groupby(['Combined']).agg(['mean', 'std'])
+    df_mon_var_agg = df_mon_var_agg.fillna(0)
+    df_mon_var_agg['worst'] = df_mon_var_agg['Amount']['mean'] \
+                              + df_mon_var_agg['Amount']['std'] * .5
+    df_mon_var_agg['best'] = df_mon_var_agg['Amount']['mean'] - \
+                             df_mon_var_agg['Amount']['std'] * .5
+
+    var_exp_base = df_mon_var_agg['Amount']['mean'].sum()
+    var_exp_worst = df_mon_var_agg['worst'].sum()
+    var_exp_best = df_mon_var_agg['best'].sum()
+
+    df_mon_fix1 = df
+    df_mon_fix1['Amount'] = df_mon_fix1['Amount'].abs()
+    df_mon_fix1 = df_mon_fix1[df_mon_fix1['Combined'].isin(fix1_cat.unique())]
+    df_mon_fix1 = df_mon_fix1.groupby(['Combined',
+                                       pd.Grouper(key='Date', freq='M')]).sum().unstack(fill_value=0).stack()
+    fixed1_exp = df_mon_fix1.groupby(['Combined']).agg(['mean']).sum()
+
+    best = var_exp_best + fixed1_exp + (bdgt_amt_fix6 / 6)
+    base = var_exp_base + fixed1_exp + (bdgt_amt_fix6 / 6)
+    worst = var_exp_worst + fixed1_exp + (bdgt_amt_fix6 / 6)
+    scenarios = {'best': best.to_list()[0], 'base': base.to_list()[0], 'worst': worst.to_list()[0]}
+
+    df_group = return_balance(start_date, end_date).groupby(pd.Grouper(key='Date', freq='M'))['Account Balance'].agg(
+        ['sum'])
+    last_month = df_group.tail(1)
+    forecast = {last_month.index[0]: last_month['sum'].to_list()[0]}
+
+    return scenarios, df_group, last_month, forecast
