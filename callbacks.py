@@ -354,7 +354,6 @@ def register_callbacks(app):
         boxData = args[-2]
         barData = args[-1]
 
-
         if timeData:
             month_year = timeData['points'][0]['x']
 

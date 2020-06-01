@@ -132,8 +132,6 @@ def calc_gauge_vals(type):
     else:
         df_combined_act = pd.merge(df_bdgt_exp, act_exp, on='Combined', how='outer')
 
-    print(df_combined_act)
-
     return df_combined_act['Amount_y'].sum() * -1, prev_act_exp['Amount'].sum() * -1, df_combined_act['Amount_x'].sum()
 
 
