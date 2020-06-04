@@ -43,10 +43,10 @@ class Account:
         self.credits = pd.concat(credit_frames).reset_index(drop=True)
         self.debits = pd.concat(debit_frames).reset_index(drop=True)
 
-        print('Credit')
-        print(self.credits)
-        print('Debit')
-        print(self.debits)
+        # print('Credit')
+        # print(self.credits)
+        # print('Debit')
+        # print(self.debits)
 
         # for file in os.listdir(bl_filepath):
         #     print(file)
@@ -56,3 +56,9 @@ class Account:
         #     df_balance['Date'] = pd.to_datetime(df_balance['Date'])
         #
         #     self.balance_log = df_balance
+
+    def get_credits(self):
+        return self.credits
+
+    def get_debits(self):
+        return self.debits

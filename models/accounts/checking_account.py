@@ -1,9 +1,9 @@
+from models.accounts.account import Account
+import pandas as pd
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join('..')))
 sys.path.append(os.path.abspath(os.path.join('.')))
-import pandas as pd
-from models.accounts.account import Account
 
 
 class PNCAccount(Account):
