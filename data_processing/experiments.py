@@ -6,20 +6,32 @@ sys.path.append(os.path.abspath(os.path.join('.')))
 
 import pandas as pd
 import numpy as np
-import data_processing.classifier.expense_classifier as ec
-import data_processing.data_processor as dp
+import data_processing.expense_classifier as ec
 
-classified_exp = './classifier/trained_clf/data/classified_exp.csv'
+classified_exp = './trained_clf/data/classified_exp.csv'
 
 if __name__ == "__main__":
+    ####
+    #
+    # CLASSIFIER
+    #
+    ####
     # exp_df = pd.read_csv(classified_exp)
-    # print("Expense Data Shape: {}".format(exp_df.shape))
-    # print("Expense Value Counts: \n{}".format(exp_df['Category'].value_counts()))
-    # result = ec.classify_expenses(exp_df)
-    # ec.read_write_classifier('./classifier/trained_clf/classifier' + datetime.today().strftime('%y_%m_%d_%H%M%S') + '.sav',
-    #                          result, write=True)
+    # result_cat, result_scat = ec.classify_expenses(exp_df)
+    # ec.read_write_classifier('./trained_clf/classifier' +
+    #                          datetime.today().strftime('%y_%m_%d_%H%M%S') +
+    #                          '_cat.sav',
+    #                          result_cat, write=True)
+    # ec.read_write_classifier('./trained_clf/classifier' +
+    #                          datetime.today().strftime('%y_%m_%d_%H%M%S') +
+    #                          '_scat.sav',
+    #                          result_scat, write=True)
 
-    data = dp.DataProcessor()
-    # data.load_pnc_csv()
-    data.load_chase_csv()
+    ####
+    #
+    # LABEL-ER
+    #
+    ####
+    ec.classify_pnc_files()
+    ec.classify_chase_files()
     # data.load_amazon_csv()
