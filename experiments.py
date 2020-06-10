@@ -10,7 +10,7 @@ import numpy as np
 
 
 if __name__ == "__main__":
-    acc_views = AccountViews('2020-01-01', '2020-04-30')
+    acc_views = AccountViews('2020-01-01', '2020-05-31')
     print(acc_views)
     # chk_acc = PNCAccount('./exp_data/PNC', '2020-01-01', '2020-04-30')
     # print('chk_acc')

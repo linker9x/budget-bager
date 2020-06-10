@@ -40,9 +40,13 @@ class Account:
             credit_frames.append(df_statement[df_statement['Amount'] >= 0])
             debit_frames.append(df_statement[df_statement['Amount'] < 0])
 
-        self.credits = pd.concat(credit_frames).reset_index(drop=True)
-        self.debits = pd.concat(debit_frames).reset_index(drop=True)
+        self.credits = pd.concat(credit_frames).reset_index(drop=True).round(2)
+        self.credits['Combined'] = self.credits['Category'] + ' ' + self.credits['Subcategory']
+        self.credits['Date'] = pd.to_datetime(self.credits['Date'])
 
+        self.debits = pd.concat(debit_frames).reset_index(drop=True).round(2)
+        self.debits['Combined'] = self.debits['Category'] + ' ' + self.debits['Subcategory']
+        self.debits['Date'] = pd.to_datetime(self.debits['Date'])
         # print('Credit')
         # print(self.credits)
         # print('Debit')
