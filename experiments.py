@@ -1,5 +1,4 @@
-from models.accounts.checking_account import PNCAccount
-from models.accounts.credit_account import ChaseAccount
+from models.forecast import Forecast
 from models.accountviews import AccountViews
 import os
 import sys
@@ -11,7 +10,11 @@ import numpy as np
 
 if __name__ == "__main__":
     acc_views = AccountViews('2020-01-01', '2020-05-31')
-    print(acc_views)
+    # print(acc_views)
+
+    forecast = Forecast(acc_views, length=3)
+    print(forecast)
+
     # chk_acc = PNCAccount('./exp_data/PNC', '2020-01-01', '2020-04-30')
     # print('chk_acc')
     # print(chk_acc)

@@ -47,19 +47,24 @@ class AccountViews:
         # print(self.df_inc_month_cat)
 
     def __str__(self):
-        return 'Start: {}, End: {}\nFix: {}\nVar: {}\nFilters: {}'.format(self.start_date,
-                                                                          self.end_date,
-                                                                          self.fix_exp,
-                                                                          self.var_exp,
-                                                                          {'df_exp': self.df_exp.empty,
-                                                                           'df_inc': self.df_inc.empty,
-                                                                           'df_fix_exp': self.df_fix_exp.empty,
-                                                                           'df_var_exp': self.df_var_exp.empty,
-                                                                           'df_var_exp_month': self.df_var_exp_month.empty,
-                                                                           'df_fix_exp_month': self.df_fix_exp_month.empty,
-                                                                           'df_exp_month_cat': self.df_exp_month_cat.empty,
-                                                                           'df_inc_month_cat': self.df_inc_month_cat.empty}
-                                                                          )
+        return 'Start: {}, End: {}\n' \
+               'Fix: {}\n' \
+               'Var: {}\n' \
+               'Filters: {}\n' \
+               'Rec Items:\n{}'.format(self.start_date,
+                                      self.end_date,
+                                      self.fix_exp,
+                                      self.var_exp,
+                                      {'df_exp': self.df_exp.empty,
+                                       'df_inc': self.df_inc.empty,
+                                       'df_fix_exp': self.df_fix_exp.empty,
+                                       'df_var_exp': self.df_var_exp.empty,
+                                       'df_var_exp_month': self.df_var_exp_month.empty,
+                                       'df_fix_exp_month': self.df_fix_exp_month.empty,
+                                       'df_exp_month_cat': self.df_exp_month_cat.empty,
+                                       'df_inc_month_cat': self.df_inc_month_cat.empty},
+                                      self.df_rec_items
+                                      )
 
     def _set_fix_var_exp(self):
         df_budget = pd.read_csv('./exp_data/budgeted_amts.csv')
