@@ -8,34 +8,24 @@ class AccountViews:
         self.start_date = start_date
         self.end_date = end_date
 
-        self.checking = PNCAccount('./exp_data/PNC', start_date, end_date)
-        self.credit = [ChaseAccount('./exp_data/Chase', start_date, end_date)]
+        self.fix_exp = []  # list of FIX expense labels
+        self.var_exp = []  # list of VAR expense labels
+        self._set_fix_var_exp()
 
-        self.fix_exp = []                       # list of FIX expense labels
-        self.var_exp = []                       # list of VAR expense labels
+        self.checking = None
+        self.credit = []
 
         self.df_exp = pd.DataFrame()            # debit entries between start and end
         self.df_inc = pd.DataFrame()            # credit entries between start and end
-
         self.df_fix_exp = pd.DataFrame()        # FIX exp between start and end
         self.df_var_exp = pd.DataFrame()        # VAR exp between start and end
-
         self.df_var_exp_month = pd.DataFrame()  # sum, avg and std of VAR exp grouped by month
         self.df_fix_exp_month = pd.DataFrame()  # sum, avg and std of FIX exp grouped by month
-
         self.df_exp_month_cat = pd.DataFrame()  # sum, avg and std of exp grouped by month and cat
         self.df_inc_month_cat = pd.DataFrame()  # sum, avg and std of inc grouped by month and cat
-
         self.df_rec_items = pd.DataFrame()      # problems
+        self.update_views()
 
-        self._reconcile()
-
-        # set all attributes
-        self._set_fix_var_exp()
-        self._filter_exp_inc()
-        self._filter_fix_var_exp()
-        self._filter_fix_var_exp_month()
-        self._filter_exp_inc_month_cat()
 
         # print(self.df_exp)
         # print(self.df_inc)
@@ -66,14 +56,28 @@ class AccountViews:
                                       self.df_rec_items
                                       )
 
+    def set_start_end_date(self, start_date, end_date):
+        self.start_date = start_date
+        self.end_date = end_date
+
+    def update_views(self):
+        self.checking = PNCAccount('./exp_data/PNC', self.start_date, self.end_date)
+        self.credit = [ChaseAccount('./exp_data/Chase', self.start_date, self.end_date)]
+
+        self._reconcile()
+        self._check_exp_labels()
+
+        self._filter_exp_inc()
+        self._filter_fix_var_exp()
+        self._filter_fix_var_exp_month()
+        self._filter_exp_inc_month_cat()
+
     def _set_fix_var_exp(self):
         df_budget = pd.read_csv('./exp_data/budgeted_amts.csv')
         df_budget['Combined'] = df_budget['Category'] + ' ' + df_budget['Subcategory']
 
         self.fix_exp = list(df_budget[df_budget['Type'] == 'FIX']['Combined'].unique())
         self.var_exp = list(df_budget[df_budget['Type'] == 'VAR']['Combined'].unique())
-
-        self._check_exp_labels()
 
     def _check_exp_labels(self):
         df_chk = self.checking.get_debits()

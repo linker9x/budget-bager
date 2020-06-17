@@ -1,6 +1,8 @@
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+from models.forecast import Forecast
+from models.accountviews import AccountViews
 
 # from app import server
 from app import app
@@ -33,9 +35,16 @@ app.layout = html.Div([
     html.Div(id='page-content')
 ])
 
+# # # # # # # # #
+# Models
+# # # # # # # # #
+av = AccountViews('2020-01-01', '2020-05-31')
+fc = Forecast(av, length=3)
+
+# # # # # # # # #
 # Callbacks
 # # # # # # # # #
-register_callbacks(app)
+register_callbacks(app, av, fc)
 
 # # # # # # # # #
 # external_css = ["https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.min.css",

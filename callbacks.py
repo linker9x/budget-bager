@@ -1,7 +1,7 @@
 import dash
 from dash.dependencies import Input, Output, State
 import dash_html_components as html
-
+from models.forecast import Forecast
 from layouts import home, page1, page2, page3, page4
 from components.functions import *
 from datetime import datetime
@@ -19,7 +19,12 @@ __var_cat = ['AMAZON', 'TRAVEL', 'PERSONAL', 'SHOPPING', 'ENTERTAINMENT', 'CATS'
              'GROCERIES', 'RESTAURANT', 'GAS']
 
 
-def register_callbacks(app):
+def register_callbacks(app, av, fc):
+    global acc_view 
+    global frcst
+    acc_view = av
+    forecast = fc
+    
     # callback to switch page content
     @app.callback(Output('page-content', 'children'),
                   [Input('url', 'pathname')])
@@ -408,7 +413,8 @@ def register_callbacks(app):
                    Input('p4-date-picker', 'end_date'),
                    Input('p4-month-dropdown', 'value')])
     def update_p4_time(start_date, end_date, months):
-        scenarios, df_group, last_month, forecast = calculate_forecast(start_date, end_date)
+        update_av_fc(start_date, end_date)
+        scenarios, df_group, last_month, dict_lm = forecast.calculate_forecast()
         for i in range(int(months) + 1):
             fore_date = last_month.index[0] + relativedelta(months=+2 + i, day=1) - timedelta(days=1)
             temp_dict = {}
@@ -416,8 +422,8 @@ def register_callbacks(app):
             for key in scenarios:
                 temp_dict[key] = last_month['sum'].to_list()[0] - (scenarios[key] * (i + 1))
 
-            forecast[fore_date] = temp_dict
-        df_forecast = pd.DataFrame(forecast).T
+            dict_lm[fore_date] = temp_dict
+        df_forecast = pd.DataFrame(dict_lm).T
 
         actual = go.Scatter(x=df_group.index.strftime('%b-%Y'),
                             y=df_group['sum'].abs(),
@@ -432,3 +438,10 @@ def register_callbacks(app):
             traces.append(trace)
 
         return {'data': traces, 'layout': None}
+    
+    def update_av_fc(start_date, end_date):
+        start_date, end_date = convert_picker_dates(start_date, end_date)
+        if start_date != acc_view.start_date or end_date != acc_view.end_date:
+            acc_view.set_start_end_date(start_date, end_date)
+            acc_view.update_views()
+            forecast.set_account_views(acc_view)

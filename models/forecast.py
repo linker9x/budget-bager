@@ -12,12 +12,16 @@ class Forecast:
 
         self.budget['Combined'] = self.budget['Category'] + ' ' + self.budget['Subcategory']
 
-        self._calculate_forecast()
+        self.calculate_forecast()
 
     def __str__(self):
         return 'cat'
 
-    def forecast_var_exp(self, row):
+    def set_account_views(self, av):
+        self.account_views = av
+        self.calculate_forecast()
+
+    def __forecast_var_exp(self, row):
         if row['Combined'][0] == 'CAR OTHER':
             forecast = 0
         elif row['Percent'][0] > .20:
@@ -26,7 +30,7 @@ class Forecast:
             forecast = row['sum']['mean']
         return forecast
 
-    def _calculate_forecast(self):
+    def calculate_forecast(self):
         mon_var_exp = list(self.budget[self.budget['Type'] == 'VAR']['Combined'].unique())
         mon_fix_exp = list(self.budget[(self.budget['Type'] == 'FIX') & (self.budget['Period'] == 1)]['Combined'].unique())
         hy_fix_exp = list(self.budget[(self.budget['Type'] == 'FIX') & (self.budget['Period'] == 6)]['Combined'].unique())
@@ -38,7 +42,7 @@ class Forecast:
         df_var_exp = df_exp_month_cat[df_exp_month_cat['Combined'].isin(mon_var_exp)].reset_index(drop=True)
         df_var_exp = df_var_exp.groupby(['Combined'])[['sum', 'std']].agg(['mean']).abs().reset_index()
         df_var_exp['Percent'] = df_var_exp['std']['mean'] / df_var_exp['sum']['mean']
-        df_var_exp['Base'] = df_var_exp.apply(self.forecast_var_exp, axis=1)
+        df_var_exp['Base'] = df_var_exp.apply(self.__forecast_var_exp, axis=1)
         var_mon_total = df_var_exp['Base'].sum()
         var_mon_mean_std = df_var_exp['sum']['mean'].std()
 
@@ -59,12 +63,11 @@ class Forecast:
 
         last_month = df_group.tail(1)
 
-        forecast = {last_month.index[0]: last_month['sum'].to_list()[0]}
-
+        self.forecast = {last_month.index[0]: last_month['sum'].to_list()[0]}
 
         print(scenarios)
         print(df_group)
         print(last_month)
-        print(forecast)
+        print(self.forecast)
 
-        return scenarios, df_group, last_month, forecast
+        return scenarios, df_group, last_month, self.forecast
