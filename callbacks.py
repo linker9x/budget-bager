@@ -24,7 +24,7 @@ def register_callbacks(app, av, fc):
     global frcst
     acc_view = av
     forecast = fc
-    
+
     # callback to switch page content
     @app.callback(Output('page-content', 'children'),
                   [Input('url', 'pathname')])
@@ -41,6 +41,18 @@ def register_callbacks(app, av, fc):
             return page4
         else:
             return None
+
+    @app.callback(Output('per-picker-dd2', 'options'),
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd1', 'options')])
+    def update_var_summary(val, options):
+        start = datetime.strptime(val, '%Y-%m-%d').date()
+        start_dates = [op['label'] for op in options]
+        start_dates = [datetime.strptime(date, '%Y-%m-%d').date() for date in start_dates]
+        end_dates = [date + relativedelta(months=+1, day=1) - timedelta(days=1) for date in start_dates]
+        end_dates = [date for date in end_dates if date > start]
+        end_dates.sort(reverse=True)
+        return [{'label': '{}'.format(date), 'value': date} for date in end_dates]
 
     #######################
     #
@@ -413,35 +425,26 @@ def register_callbacks(app, av, fc):
                    Input('p4-date-picker', 'end_date'),
                    Input('p4-month-dropdown', 'value')])
     def update_p4_time(start_date, end_date, months):
-        update_av_fc(start_date, end_date)
-        scenarios, df_group, last_month, dict_lm = forecast.calculate_forecast()
-        for i in range(int(months) + 1):
-            fore_date = last_month.index[0] + relativedelta(months=+2 + i, day=1) - timedelta(days=1)
-            temp_dict = {}
+        update_av_fc(start_date, end_date, length=int(months))
+        df_acc_mon_tot, df_forecast = forecast.calculate_forecast()
 
-            for key in scenarios:
-                temp_dict[key] = last_month['sum'].to_list()[0] - (scenarios[key] * (i + 1))
-
-            dict_lm[fore_date] = temp_dict
-        df_forecast = pd.DataFrame(dict_lm).T
-
-        actual = go.Scatter(x=df_group.index.strftime('%b-%Y'),
-                            y=df_group['sum'].abs(),
+        actual = go.Scatter(x=df_acc_mon_tot.index.strftime('%b-%Y'),
+                            y=df_acc_mon_tot['sum'].abs(),
                             name='actual')
 
         traces = [actual]
-        for key in scenarios:
-            # print(scenarios[key])
+        for scenario in list(df_forecast.columns):
+            # print(scenarios[scenario])
             trace = go.Scatter(x=df_forecast.index.strftime('%b-%Y'),
-                               y=df_forecast[key],
-                               name=key)
+                               y=df_forecast[scenario],
+                               name=scenario)
             traces.append(trace)
 
         return {'data': traces, 'layout': None}
     
-    def update_av_fc(start_date, end_date):
+    def update_av_fc(start_date, end_date, length=3):
         start_date, end_date = convert_picker_dates(start_date, end_date)
-        if start_date != acc_view.start_date or end_date != acc_view.end_date:
+        if start_date != acc_view.start_date or end_date != acc_view.end_date or length != forecast.length:
             acc_view.set_start_end_date(start_date, end_date)
             acc_view.update_views()
-            forecast.set_account_views(acc_view)
+            forecast.set_account_views(acc_view, length)

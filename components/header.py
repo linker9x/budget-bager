@@ -1,13 +1,19 @@
+import os
 import dash_html_components as html
 import dash_core_components as dcc
+from datetime import datetime, timedelta
+from dateutil.relativedelta import *
+
 
 def Header():
     return html.Div([
         # get_logo(),
         get_header(),
         html.Br([]),
-        get_menu()
+        get_menu(),
+        get_period_picker()
     ])
+
 
 def get_logo():
     logo = html.Div([
@@ -46,3 +52,61 @@ def get_menu():
 
     ], className="row ")
     return menu
+
+
+def get_period_picker():
+    dates = os.listdir('./exp_data/PNC/statements/')
+    dates = [date.replace('.csv', '') for date in dates]
+    start_dates = [datetime.strptime(date, '%m_%Y').date() for date in dates]
+    end_dates = [date + relativedelta(months=+1, day=1) - timedelta(days=1) for date in start_dates]
+    start_dates.sort(reverse=True)
+    end_dates.sort(reverse=True)
+
+    print(end_dates)
+    period_picker = html.Div([
+        html.Div([
+            html.Div([
+                html.H6('Start',
+                        style={'margin-right': '1em'})
+            ], style=dict(
+                    width='14%',
+                    display='inline-block',
+                    verticalAlign='middle')),
+            dcc.Dropdown(
+                options=[{'label': '{}'.format(date), 'value': date} for date in start_dates],
+                value=start_dates[-1],
+                multi=False,
+                id='per-picker-dd1',
+                style=dict(
+                    width='84%',
+                    display='inline-block',
+                    verticalAlign='middle')
+            )
+        ], style=dict(
+                    width='49%',
+                    display='inline-block',
+                    verticalAlign='middle')),
+        html.Div([
+            html.Div([
+                html.H6('End',
+                        style={'margin-right': '1em'})
+            ], style=dict(
+                    width='14%',
+                    display='inline-block',
+                    verticalAlign='middle')),
+            dcc.Dropdown(
+                options=[{'label': '{}'.format(date), 'value': date} for date in end_dates],
+                value=end_dates[0],
+                multi=False,
+                id='per-picker-dd2',
+                style=dict(
+                    width='84%',
+                    display='inline-block',
+                    verticalAlign='middle')
+            )
+        ], style=dict(
+                    width='49%',
+                    display='inline-block',
+                    verticalAlign='middle'))
+    ], style=dict(display='flex'))
+    return period_picker

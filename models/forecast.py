@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+from datetime import timedelta
+from dateutil.relativedelta import *
 from models.accountviews import AccountViews
 
 
@@ -17,7 +19,8 @@ class Forecast:
     def __str__(self):
         return 'cat'
 
-    def set_account_views(self, av):
+    def set_account_views(self, av, length=3):
+        self.length = length
         self.account_views = av
         self.calculate_forecast()
 
@@ -59,15 +62,21 @@ class Forecast:
 
         chk_acc_bal = av.checking.balance_log
 
-        df_group = chk_acc_bal.groupby(pd.Grouper(key='Date', freq='M'))['Account Balance'].agg(['sum'])
+        df_acc_mon_tot = chk_acc_bal.groupby(pd.Grouper(key='Date', freq='M'))['Account Balance'].agg(['sum'])
 
-        last_month = df_group.tail(1)
+        last_month = df_acc_mon_tot.tail(1)
+        dict_lm = {last_month.index[0]: last_month['sum'].to_list()[0]}
 
-        self.forecast = {last_month.index[0]: last_month['sum'].to_list()[0]}
+        for i in range(self.length):
+            fore_date = last_month.index[0] + relativedelta(months=+2 + i, day=1) - timedelta(days=1)
+            temp_dict = {}
 
-        print(scenarios)
-        print(df_group)
-        print(last_month)
-        print(self.forecast)
+            for key in scenarios:
+                temp_dict[key] = last_month['sum'].to_list()[0] - (scenarios[key] * (i + 1))
 
-        return scenarios, df_group, last_month, self.forecast
+            dict_lm[fore_date] = temp_dict
+
+        self.forecast = pd.DataFrame(dict_lm).T
+        self.forecast.index.name = 'Date'
+
+        return df_acc_mon_tot, self.forecast
