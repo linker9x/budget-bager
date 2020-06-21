@@ -14,16 +14,12 @@ import numpy as np
 import copy
 import calendar
 
-__fixed_cat = ['CAR', 'HEALTHCARE', 'FITNESS', 'PHONE']
-__var_cat = ['AMAZON', 'TRAVEL', 'PERSONAL', 'SHOPPING', 'ENTERTAINMENT', 'CATS',
-             'GROCERIES', 'RESTAURANT', 'GAS']
-
 
 def register_callbacks(app, av, fc):
     global acc_view 
     global frcst
     acc_view = av
-    forecast = fc
+    frcst = fc
 
     #######################
     #
@@ -70,12 +66,13 @@ def register_callbacks(app, av, fc):
     @app.callback(Output('var-summary-table', 'data'),
                   [Input('home-var-dropdown', 'value')])
     def update_var_summary(val):
-        return update_summary_table('VAR')
+        acc_view.df_exp_month_cat.to_csv('hi.csv')
+        return update_summary_table(acc_view, frcst, 'VAR')
 
     @app.callback(Output('fix-summary-table', 'data'),
                   [Input('home-var-dropdown', 'value')])
     def update_var_summary(val):
-        return update_summary_table('FIX')
+        return update_summary_table(acc_view, frcst, 'FIX')
 
     # HOME - GAUGES
     @app.callback(Output('home-gauge', 'figure'),

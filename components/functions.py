@@ -36,6 +36,32 @@ def convert_picker_dates(start_date, end_date):
     return start_date_string, end_date_string
 
 
+def update_summary_table(acc_view, frcst, type):
+    df_bdgt_amt = copy.deepcopy(frcst.budget)
+    df_bdgt_amt['Combined'] = df_bdgt_amt['Category'] + ' ' + df_bdgt_amt['Subcategory']
+    df_bdgt_exp = df_bdgt_amt[(df_bdgt_amt['Type'] == type)]
+    df_bdgt_exp = df_bdgt_exp.reset_index(drop=True)
+
+    expenses = df_bdgt_exp['Combined'].unique()
+
+    df_act = copy.deepcopy(acc_view.df_exp_month_cat).abs()
+    df_act_exp = df_act.unstack(fill_value=0).stack().reset_index()
+    df_act_exp_prev_mon = df_act_exp[df_act_exp['Date'] == df_act_exp['Date'].max()]
+    df_act_exp_prev_mon = df_act_exp_prev_mon.reset_index(drop=True)
+    df_act_exp_prev_mon.drop(['mean', 'std'], axis=1, inplace=True)
+
+    df_combined = pd.merge(df_bdgt_exp,
+                           df_act_exp_prev_mon,
+                           on='Combined',
+                           how='left').fillna(0)
+
+    df_combined = df_combined.sort_values(by=['sum', 'Amount'], ascending=False)
+    df_combined = df_combined.filter(['Category', 'Subcategory', 'sum', 'Amount'])
+    df_combined.rename(columns={'Amount': 'Budget', 'sum': 'Actual'}, inplace=True)
+    df_combined['Diff'] = df_combined['Budget'] - df_combined['Actual']
+    return df_combined.to_dict("rows")
+
+
 def update_datatable(start_date, end_date, categories, accounts):
     if start_date is not None:
         start_date = datetime.strptime(start_date[:10], '%Y-%m-%d')
@@ -135,34 +161,7 @@ def calc_gauge_vals(type):
     return df_combined_act['Amount_y'].sum() * -1, prev_act_exp['Amount'].sum() * -1, df_combined_act['Amount_x'].sum()
 
 
-def update_summary_table(type):
-    df_bdgt_amt = copy.deepcopy(df_budget)
-    df_bdgt_amt['Combined'] = df_bdgt_amt['Category'] + ' ' + df_bdgt_amt['Subcategory']
-    df_bdgt_exp = df_bdgt_amt[(df_bdgt_amt['Type'] == type)]
-    df_bdgt_exp = df_bdgt_exp.reset_index(drop=True)
 
-    expenses = df_bdgt_exp['Combined'].unique()
-
-    df_act = copy.deepcopy(df)
-    df_act['Combined'] = df_act['Category'] + ' ' + df_act['Subcategory']
-    df_act_exp = df_act[(df_act['Amount'] < 0) &
-                        df_act['Combined'].isin(expenses)].groupby(['Combined', pd.Grouper(key='Date', freq='M')]).sum()
-    df_act_exp = df_act_exp.unstack(fill_value=0).stack().reset_index()
-    df_act_exp_prev_mon = df_act_exp[df_act_exp['Date'] == df_act_exp['Date'].max()]
-
-    df_act_exp_prev_mon = df_act_exp_prev_mon.reset_index(drop=True)
-
-    if type == 'FIX':
-        df_combined = pd.merge(df_bdgt_exp, df_act_exp_prev_mon[df_act_exp_prev_mon['Amount'] != 0.0], on='Combined', how='right')
-    else:
-        df_combined = pd.merge(df_bdgt_exp, df_act_exp_prev_mon, on='Combined', how='outer')
-
-    df_combined = df_combined.filter(['Category', 'Subcategory', 'Amount_x', 'Amount_y'])
-
-    df_combined['Amount_y'] = df_combined['Amount_y'].abs()
-    df_combined.rename(columns={'Amount_x': 'Budget', 'Amount_y': 'Actual'}, inplace=True)
-    df_combined['Diff'] = df_combined['Budget'] - df_combined['Actual']
-    return df_combined.to_dict("rows")
 
 def return_budget():
     return df_budget
