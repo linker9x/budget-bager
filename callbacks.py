@@ -25,6 +25,12 @@ def register_callbacks(app, av, fc):
     acc_view = av
     forecast = fc
 
+    #######################
+    #
+    # HEADER
+    #
+    #######################
+
     # callback to switch page content
     @app.callback(Output('page-content', 'children'),
                   [Input('url', 'pathname')])
@@ -137,8 +143,8 @@ def register_callbacks(app, av, fc):
     @app.callback([Output('stat-datatable', 'data'),
                    Output('count-sum-text', 'children'),
                    Output('descrip-date', 'children')],
-                  [Input('stat-date-picker', 'start_date'),
-                   Input('stat-date-picker', 'end_date'),
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd2', 'value'),
                    Input('cat-dropdown', 'value'),
                    Input('acc-checklist', 'value')])
     def update_p1_table(start_date, end_date, categories, accounts):
@@ -164,8 +170,8 @@ def register_callbacks(app, av, fc):
 
     # P2 - Expenses/Income Area Graph
     @app.callback(Output('in-out-area-graph', 'figure'),
-                  [Input('p2-date-picker', 'start_date'),
-                   Input('p2-date-picker', 'end_date')])
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd2', 'value')])
     def update_p2_area_graph(start_date, end_date):
         df_per = update_period_df(start_date, end_date)
         df_in = df_per[df_per['Amount'] >= 0].groupby(pd.Grouper(key='Date', freq='M')).sum()
@@ -184,8 +190,8 @@ def register_callbacks(app, av, fc):
 
     # P2 - Expenses Stacked Bar Graph
     @app.callback(Output('exp-stacked', 'figure'),
-                  [Input('p2-date-picker', 'start_date'),
-                   Input('p2-date-picker', 'end_date'),
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd2', 'value'),
                    Input('p2-exp-radio', 'value')])
     def update_p2_stacked(start_date, end_date, type):
         df_period = update_period_df(start_date, end_date)
@@ -211,8 +217,8 @@ def register_callbacks(app, av, fc):
 
     # P2 - Expenses Pie
     @app.callback(Output('exp-pie', 'figure'),
-                  [Input('p2-date-picker', 'start_date'),
-                   Input('p2-date-picker', 'end_date'),
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd2', 'value'),
                    Input('p2-exp-radio', 'value')])
     def update_p2_var(start_date, end_date, type):
         df_period = update_period_df(start_date, end_date)
@@ -229,8 +235,8 @@ def register_callbacks(app, av, fc):
 
     # P2 - Expenses Stacked Bar Graph
     @app.callback(Output('p2-exp-datatable', 'data'),
-                  [Input('p2-date-picker', 'start_date'),
-                   Input('p2-date-picker', 'end_date')])
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd2', 'value')])
     def update_p2_table(start_date, end_date):
         return update_p2_varfix_table(start_date, end_date).to_dict("rows")
 
@@ -260,8 +266,8 @@ def register_callbacks(app, av, fc):
 
     # P3 - Box Plot
     @app.callback(Output('p3-box-plot', 'figure'),
-                  [Input('p3-date-picker', 'start_date'),
-                   Input('p3-date-picker', 'end_date'),
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd2', 'value'),
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_box(start_date, end_date, categories, mode):
@@ -289,8 +295,8 @@ def register_callbacks(app, av, fc):
 
     # P3 - Bar Graph
     @app.callback(Output('p3-bar-plot', 'figure'),
-                  [Input('p3-date-picker', 'start_date'),
-                   Input('p3-date-picker', 'end_date'),
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd2', 'value'),
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_bar(start_date, end_date, categories, mode):
@@ -320,8 +326,8 @@ def register_callbacks(app, av, fc):
 
     # P3 - Time series
     @app.callback(Output('p3-time-plot', 'figure'),
-                  [Input('p3-date-picker', 'start_date'),
-                   Input('p3-date-picker', 'end_date'),
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd2', 'value'),
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_time(start_date, end_date, categories, mode):
@@ -354,8 +360,8 @@ def register_callbacks(app, av, fc):
         [Input('p3-time-plot', 'clickData'),
          Input('p3-box-plot', 'clickData'),
          Input('p3-bar-plot', 'clickData'),
-         Input('p3-date-picker', 'start_date'),
-         Input('p3-date-picker', 'end_date'),
+         Input('per-picker-dd1', 'value'),
+         Input('per-picker-dd2', 'value'),
          Input('p3-cat-dropdown', 'value'),
          Input('p3-mode-dropdown', 'value')],
         [State('p3-time-plot', 'hoverData'),
@@ -421,8 +427,8 @@ def register_callbacks(app, av, fc):
 
     # P4 - Time series
     @app.callback(Output('p4-time-forecast-plot', 'figure'),
-                  [Input('p4-date-picker', 'start_date'),
-                   Input('p4-date-picker', 'end_date'),
+                  [Input('per-picker-dd1', 'value'),
+                   Input('per-picker-dd2', 'value'),
                    Input('p4-month-dropdown', 'value')])
     def update_p4_time(start_date, end_date, months):
         update_av_fc(start_date, end_date, length=int(months))

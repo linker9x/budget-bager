@@ -15,12 +15,6 @@ __fixed_cat = ['CAR', 'HEALTHCARE', 'FITNESS', 'PHONE']
 __var_cat = ['AMAZON', 'TRAVEL', 'PERSONAL', 'SHOPPING', 'ENTERTAINMENT', 'CATS',
              'GROCERIES', 'RESTAURANT', 'GAS']
 
-df_test = pd.DataFrame(
-    {
-        "First Name": ["Arthur", "Ford", "Zaphod", "Trillian"],
-        "Last Name": ["Winkler", "Prefect", "Beeblebrox", "Astra"],
-    }
-)
 
 home = html.Div([
     html.Div([
@@ -78,43 +72,110 @@ home = html.Div([
     ])
 ])
 
-page4 = html.Div([
+##########
+# Statement Page
+##########
+page1 = html.Div([
     html.Div([
-            # HEADER
-            header.Header(),
-            # PAGE NAME
+        # HEADER
+        header.Header(),
+        # PAGE NAME
+        html.Div([
+            html.H6(['Page1'], className="bb-header", style={'marginTop': 10})
+        ]),
+        html.Div(id='descrip-date'),
+        # DATE/CAT PICKER
+        html.Div([
             html.Div([
-                html.H6(['Page4'], className="bb-header", style={'marginTop': 10})
-            ])
-    ]),
-    # SELECTION/INPUTS
-    html.Div([
-        dcc.DatePickerRange(
-          id='p4-date-picker',
-          min_date_allowed=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
-          max_date_allowed=df['Date'].max().to_pydatetime(),
-          initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
-          start_date=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
-          end_date=df['Date'].max().to_pydatetime(),
-        ),
-        dcc.Dropdown(
-            options=[
-                {'label': '3 Month', 'value': '3'},
-                {'label': '6 Month', 'value': '6'}
-            ],
-            value='3',
-            clearable=False,
-            id='p4-month-dropdown'
-        )
-    ]),
-    # GRAPH(S)
-    html.Div([
-        html.Div([dcc.Graph(id='p4-time-forecast-plot',
-                            clear_on_unhover=True)
-                  ])
+                # dcc.DatePickerRange(
+                #   id='stat-date-picker',
+                #   min_date_allowed=df['Date'].min().to_pydatetime(),
+                #   max_date_allowed=df['Date'].max().to_pydatetime(),
+                #   initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
+                #   start_date=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
+                #   end_date=df['Date'].max().to_pydatetime(),
+                # ),
+                dcc.Dropdown(
+                    options=[{'label': '{}'.format(cat), 'value': cat} for cat in df['Category'].unique()],
+                    value=['AMAZON'],
+                    multi=True,
+                    id='cat-dropdown'
+                )
+            ]),
+            html.Div(id='page1')
+        ], className="row ", style={'marginTop': 10, 'marginBottom': 10}),
+        # RADIO BUTTONS
+        html.Div([
+            dcc.Checklist(
+                options=[{'label': '{}'.format(acc), 'value': acc} for acc in df['Source'].unique()],
+                value=['PNC', 'Chase'],
+                labelStyle={'display': 'inline-block', 'width': '30%', 'margin': 'auto', 'marginTop': 10, 'paddingLeft': 10},
+                id='acc-checklist'
+            )
+        ]),
+        html.Div(id='count-sum-text'),
+        # TABLE
+        html.Div([
+            dash_table.DataTable(
+                id='stat-datatable',
+                columns=[{"name": i, "id": i} for i in df.columns],
+                # + [{"name": j, "id": j} for j in df.columns],
+                style_table={'maxWidth': '1500px'},
+                # editable=True,
+                # row_selectable="multi",
+                # selected_rows=[0],
+                ),
+        ], className=" twelve columns")
     ])
 ])
 
+##########
+# Period Overview Page
+##########
+page2 = html.Div([
+    html.Div([
+        # HEADER
+        header.Header(),
+        # PAGE NAME
+        html.Div([
+            html.H6(['Page2'], className="bb-header", style={'marginTop': 10})
+        ]),
+        # html.Div([
+        #     dcc.DatePickerRange(
+        #       id='p2-date-picker',
+        #       min_date_allowed=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+        #       max_date_allowed=df['Date'].max().to_pydatetime(),
+        #       initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
+        #       start_date=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+        #       end_date=df['Date'].max().to_pydatetime(),
+        #     )
+        # ]),
+        # TOP DIV
+        html.Div([
+            html.Div([dcc.Graph(id='in-out-area-graph')]),
+            html.Div([dash_table.DataTable(
+                id='p2-exp-datatable',
+                columns=[{"name": 'Month', "id": 'Month'},
+                         {"name": 'Variable', "id": 'Variable'},
+                         {"name": 'Fixed', "id": 'Fixed'},
+                         {"name": 'Total', "id": 'Total'}],
+                style_table={'maxWidth': '1500px'}
+            )])
+        ]),
+        # BOTTOM DIV
+        html.Div([
+            html.Div([dcc.RadioItems(
+                id='p2-exp-radio',
+                options=[{'label': 'Variable', 'value': 'VAR'},
+                         {'label': 'Fixed', 'value': 'FIX'}],
+                value='VAR')]),
+            # Bar Chart
+            html.Div([dcc.Graph(id='exp-stacked')]),
+            # Pie Chart
+            html.Div([dcc.Graph(id='exp-pie')])
+        ])
+    ])
+])
 
 ##########
 # Category Overview Page
@@ -128,14 +189,14 @@ page3 = html.Div([
             html.H6(['Page3'], className="bb-header", style={'marginTop': 10})
         ]),
         html.Div([
-            dcc.DatePickerRange(
-              id='p3-date-picker',
-              min_date_allowed=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
-              max_date_allowed=df['Date'].max().to_pydatetime(),
-              initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
-              start_date=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
-              end_date=df['Date'].max().to_pydatetime(),
-            ),
+            # dcc.DatePickerRange(
+            #   id='p3-date-picker',
+            #   min_date_allowed=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+            #   max_date_allowed=df['Date'].max().to_pydatetime(),
+            #   initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
+            #   start_date=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+            #   end_date=df['Date'].max().to_pydatetime(),
+            # ),
             dcc.Dropdown(
                 options=[
                     {'label': 'Mono', 'value': 'MONO'},
@@ -174,108 +235,45 @@ page3 = html.Div([
     ])
 ])
 
-##########
-# Period Overview Page
-##########
-page2 = html.Div([
+page4 = html.Div([
     html.Div([
-        # HEADER
-        header.Header(),
-        # PAGE NAME
-        html.Div([
-            html.H6(['Page2'], className="bb-header", style={'marginTop': 10})
-        ]),
-        html.Div([
-            dcc.DatePickerRange(
-              id='p2-date-picker',
-              min_date_allowed=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
-              max_date_allowed=df['Date'].max().to_pydatetime(),
-              initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
-              start_date=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
-              end_date=df['Date'].max().to_pydatetime(),
-            )
-        ]),
-        # TOP DIV
-        html.Div([
-            html.Div([dcc.Graph(id='in-out-area-graph')]),
-            html.Div([dash_table.DataTable(
-                id='p2-exp-datatable',
-                columns=[{"name": 'Month', "id": 'Month'},
-                         {"name": 'Variable', "id": 'Variable'},
-                         {"name": 'Fixed', "id": 'Fixed'},
-                         {"name": 'Total', "id": 'Total'}],
-                style_table={'maxWidth': '1500px'}
-            )])
-        ]),
-        # BOTTOM DIV
-        html.Div([
-            html.Div([dcc.RadioItems(
-                id='p2-exp-radio',
-                options=[{'label': 'Variable', 'value': 'VAR'},
-                         {'label': 'Fixed', 'value': 'FIX'}],
-                value='VAR')]),
-            # Bar Chart
-            html.Div([dcc.Graph(id='exp-stacked')]),
-            # Pie Chart
-            html.Div([dcc.Graph(id='exp-pie')])
-        ])
-    ])
-])
-
-
-##########
-# Statement Page
-##########
-page1 = html.Div([
-    html.Div([
-        # HEADER
-        header.Header(),
-        # PAGE NAME
-        html.Div([
-            html.H6(['Page1'], className="bb-header", style={'marginTop': 10})
-        ]),
-        html.Div(id='descrip-date'),
-        # DATE/CAT PICKER
-        html.Div([
+            # HEADER
+            header.Header(),
+            # PAGE NAME
             html.Div([
-                dcc.DatePickerRange(
-                  id='stat-date-picker',
-                  min_date_allowed=df['Date'].min().to_pydatetime(),
-                  max_date_allowed=df['Date'].max().to_pydatetime(),
-                  initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
-                  start_date=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
-                  end_date=df['Date'].max().to_pydatetime(),
-                ),
-                dcc.Dropdown(
-                    options=[{'label': '{}'.format(cat), 'value': cat} for cat in df['Category'].unique()],
-                    value=['AMAZON'],
-                    multi=True,
-                    id='cat-dropdown'
-                )
-            ]),
-            html.Div(id='page1')
-        ], className="row ", style={'marginTop': 10, 'marginBottom': 10}),
-        # RADIO BUTTONS
-        html.Div([
-            dcc.Checklist(
-                options=[{'label': '{}'.format(acc), 'value': acc} for acc in df['Source'].unique()],
-                value=['PNC', 'Chase'],
-                labelStyle={'display': 'inline-block', 'width': '30%', 'margin': 'auto', 'marginTop': 10, 'paddingLeft': 10},
-                id='acc-checklist'
-            )
-        ]),
-        html.Div(id='count-sum-text'),
-        # TABLE
-        html.Div([
-            dash_table.DataTable(
-                id='stat-datatable',
-                columns=[{"name": i, "id": i} for i in df.columns],
-                # + [{"name": j, "id": j} for j in df.columns],
-                style_table={'maxWidth': '1500px'},
-                # editable=True,
-                # row_selectable="multi",
-                # selected_rows=[0],
-                ),
-        ], className=" twelve columns")
+                html.H6(['Page4'], className="bb-header", style={'marginTop': 10})
+            ])
+    ]),
+    # SELECTION/INPUTS
+    html.Div([
+        # dcc.DatePickerRange(
+        #   id='p4-date-picker',
+        #   min_date_allowed=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+        #   max_date_allowed=df['Date'].max().to_pydatetime(),
+        #   initial_visible_month=dt(df['Date'].max().to_pydatetime().year, df['Date'].max().to_pydatetime().month, 1),
+        #   start_date=dt(df['Date'].min().to_pydatetime().year, df['Date'].min().to_pydatetime().month, 1),
+        #   end_date=df['Date'].max().to_pydatetime(),
+        # ),
+        dcc.Dropdown(
+            options=[
+                {'label': '3 Month', 'value': '3'},
+                {'label': '6 Month', 'value': '6'}
+            ],
+            value='3',
+            clearable=False,
+            id='p4-month-dropdown'
+        )
+    ]),
+    # GRAPH(S)
+    html.Div([
+        html.Div([dcc.Graph(id='p4-time-forecast-plot',
+                            clear_on_unhover=True)
+                  ])
     ])
 ])
+
+
+
+
+
+
