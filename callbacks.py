@@ -78,8 +78,8 @@ def register_callbacks(app, av, fc):
     @app.callback(Output('home-gauge', 'figure'),
                   [Input('home-var-dropdown', 'value')])
     def update_gauge(cat):
-        var_act_exp, var_prev_act_exp, var_mon_bdgt_exp = calc_gauge_vals('VAR')
-        fix_act_exp, fix_prev_act_exp, fix_mon_bdgt_exp = calc_gauge_vals('FIX')
+        var_act_exp, var_prev_act_exp, var_mon_bdgt_exp = calc_gauge_vals(acc_view, frcst, 'VAR')
+        fix_act_exp, fix_prev_act_exp, fix_mon_bdgt_exp = calc_gauge_vals(acc_view, frcst, 'FIX')
 
         fig = make_subplots(
             rows=1, cols=2,
@@ -91,7 +91,7 @@ def register_callbacks(app, av, fc):
             mode="gauge+number+delta",
             value=var_act_exp,
             title={'text': "Variable EXP", 'font': {'size': 24}},
-            delta={'reference': var_prev_act_exp}, #change triangle
+            delta={'reference': var_prev_act_exp},  #change triangle
             gauge={
                 'axis': {'range': [None, var_mon_bdgt_exp + 1000], 'tickwidth': 1, 'tickcolor': "darkblue"},
                 'bar': {'color': "white"},
@@ -145,7 +145,8 @@ def register_callbacks(app, av, fc):
                    Input('cat-dropdown', 'value'),
                    Input('acc-checklist', 'value')])
     def update_p1_table(start_date, end_date, categories, accounts):
-        data_1 = update_datatable(start_date, end_date, categories, accounts)
+        update_av_fc(start_date, end_date)
+        data_1 = update_datatable(acc_view, start_date, end_date, categories, accounts)
 
         disp_text = 'Number of Rows:' + str(len(data_1)) + ' | ' + \
                     'Sum of Rows:' + str(data_1['Amount'].sum())
@@ -429,7 +430,7 @@ def register_callbacks(app, av, fc):
                    Input('p4-month-dropdown', 'value')])
     def update_p4_time(start_date, end_date, months):
         update_av_fc(start_date, end_date, length=int(months))
-        df_acc_mon_tot, df_forecast = forecast.calculate_forecast()
+        df_acc_mon_tot, df_forecast = frcst.calculate_forecast()
 
         actual = go.Scatter(x=df_acc_mon_tot.index.strftime('%b-%Y'),
                             y=df_acc_mon_tot['sum'].abs(),
@@ -447,7 +448,8 @@ def register_callbacks(app, av, fc):
     
     def update_av_fc(start_date, end_date, length=3):
         start_date, end_date = convert_picker_dates(start_date, end_date)
-        if start_date != acc_view.start_date or end_date != acc_view.end_date or length != forecast.length:
+        if start_date != acc_view.start_date or end_date != acc_view.end_date or length != frcst.length:
+            print('Recalculating...')
             acc_view.set_start_end_date(start_date, end_date)
             acc_view.update_views()
-            forecast.set_account_views(acc_view, length)
+            frcst.set_account_views(acc_view, length)
