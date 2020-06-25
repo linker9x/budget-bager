@@ -63,7 +63,7 @@ class AccountViews:
     def update_views(self):
         self.checking = PNCAccount('./exp_data/PNC', self.start_date, self.end_date)
         self.credit = [ChaseAccount('./exp_data/Chase', self.start_date, self.end_date)]
-
+        print('self start:{} self end:{}'.format(self.start_date, self.end_date))
         self._reconcile()
         self._check_exp_labels()
 
@@ -95,7 +95,18 @@ class AccountViews:
             raise Exception('Credit expenses mislabeled.')
 
     def _filter_exp_inc(self):
+        df_bs = self.checking.get_debits()
+        df_cs = self.credit[0].get_debits()
+
+        print(df_bs)
+        print(df_cs)
+
+        bs_ids = set(df_bs[df_bs['Category'] == 'PAYMENT']['ID'].to_list())
+        cs_ids = set(df_cs['ID'].unique())
+
+        print(bs_ids - cs_ids)
         self.df_exp = pd.concat([self.checking.get_debits(), self.credit[0].get_debits()])
+
         self.df_inc = pd.concat([self.checking.get_credits(), self.credit[0].get_credits()])
 
     def _filter_fix_var_exp(self):

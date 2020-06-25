@@ -104,12 +104,7 @@ def update_datatable(acc_view, start_date, end_date, categories, accounts):
 
 
 def update_period_df(start_date, end_date):
-    if start_date is not None:
-        start_date = datetime.strptime(start_date[:10], '%Y-%m-%d')
-        start_date_string = start_date.strftime('%Y-%m-%d')
-    if end_date is not None:
-        end_date = datetime.strptime(end_date[:10], '%Y-%m-%d')
-        end_date_string = end_date.strftime('%Y-%m-%d')
+    start_date_string, end_date_string = convert_picker_dates(start_date, end_date)
 
     df_sub = copy.deepcopy(df)
     df_sub = df_sub[(df_sub['Date'] >= start_date_string) & (df_sub['Date'] <= end_date_string)

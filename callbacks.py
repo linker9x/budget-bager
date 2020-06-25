@@ -146,10 +146,10 @@ def register_callbacks(app, av, fc):
                    Input('acc-checklist', 'value')])
     def update_p1_table(start_date, end_date, categories, accounts):
         update_av_fc(start_date, end_date)
-        data_1 = update_datatable(acc_view, start_date, end_date, categories, accounts)
+        data = update_datatable(acc_view, start_date, end_date, categories, accounts)
 
-        disp_text = 'Number of Rows:' + str(len(data_1)) + ' | ' + \
-                    'Sum of Rows:' + str(data_1['Amount'].sum())
+        disp_text = 'Number of Rows:' + str(len(data)) + ' | ' + \
+                    'Sum of Rows:' + str(data['Amount'].sum())
 
         start_date_string, end_date_string = convert_picker_dates(start_date, end_date)
         days_selected = (datetime.strptime(end_date[:10], '%Y-%m-%d') -
@@ -158,7 +158,7 @@ def register_callbacks(app, av, fc):
                         '| End Date: ' + end_date_string + \
                         '| Period Length: ' + str(days_selected + 1) + ' Days'
 
-        return[data_1.to_dict("rows"), disp_text, string_prefix]
+        return[data.to_dict("rows"), disp_text, string_prefix]
 
     #######################
     #
@@ -171,16 +171,23 @@ def register_callbacks(app, av, fc):
                   [Input('per-picker-dd1', 'value'),
                    Input('per-picker-dd2', 'value')])
     def update_p2_area_graph(start_date, end_date):
-        df_per = update_period_df(start_date, end_date)
-        df_in = df_per[df_per['Amount'] >= 0].groupby(pd.Grouper(key='Date', freq='M')).sum()
-        df_out = df_per[df_per['Amount'] < 0].groupby(pd.Grouper(key='Date', freq='M')).sum()
+        update_av_fc(start_date, end_date)
 
-        data = [go.Scatter(x=[mon.strftime('%B') for mon in df_in.index],
-                           y=df_in['Amount'],
+        df_credit = copy.deepcopy(av.df_inc)
+        df_debit = copy.deepcopy(av.df_exp)
+        # print(df_debit[df_debit['Date'] < '2020-01-01'])
+        df_credit = df_credit[df_credit['Category'].isin(['INTEREST', 'INCOME'])].groupby(pd.Grouper(key='Date', freq='M')).sum()
+        df_debit = df_debit.groupby(pd.Grouper(key='Date', freq='M')).sum()
+        # print(av.df_var_exp_month)
+        # print(av.df_fix_exp_month)
+        # print(df_debit)
+
+        data = [go.Scatter(x=[mon.strftime('%B') for mon in df_credit.index],
+                           y=df_credit['Amount'],
                            name='INCOME',
                            fill='tonexty'),
-                go.Scatter(x=[mon.strftime('%B') for mon in df_out.index],
-                           y=df_out['Amount'].abs(),
+                go.Scatter(x=[mon.strftime('%B') for mon in df_debit.index],
+                           y=df_debit['Amount'].abs(),
                            name='EXPENSES',
                            fill='tonexty')]
         layout = go.Layout()
@@ -192,7 +199,9 @@ def register_callbacks(app, av, fc):
                    Input('per-picker-dd2', 'value'),
                    Input('p2-exp-radio', 'value')])
     def update_p2_stacked(start_date, end_date, type):
-        df_period = update_period_df(start_date, end_date)
+        update_av_fc(start_date, end_date)
+        df_period = av.df_exp
+
         order = agg_by_month(start_date, end_date).index.strftime('%b-%Y')
 
         if type == 'FIX':
@@ -219,7 +228,7 @@ def register_callbacks(app, av, fc):
                    Input('per-picker-dd2', 'value'),
                    Input('p2-exp-radio', 'value')])
     def update_p2_var(start_date, end_date, type):
-        df_period = update_period_df(start_date, end_date)
+        df_period = av.df_exp
         df_cat = df_period[df_period['Amount'] < 0].groupby('Combined')['Amount'].agg(['sum'])
         if type == 'FIX':
             exp_cat = get_fix_exp()
@@ -269,7 +278,7 @@ def register_callbacks(app, av, fc):
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_box(start_date, end_date, categories, mode):
-        df_period = update_period_df(start_date, end_date)
+        df_period = av.df_exp
         data = []
 
         if mode == 'MULTI':
@@ -298,7 +307,7 @@ def register_callbacks(app, av, fc):
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_bar(start_date, end_date, categories, mode):
-        df_period = update_period_df(start_date, end_date)
+        df_period = av.df_exp
         data = []
         order = df_period.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum']).index.strftime('%b-%Y')
 
@@ -329,7 +338,7 @@ def register_callbacks(app, av, fc):
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_time(start_date, end_date, categories, mode):
-        df_period = update_period_df(start_date, end_date)
+        df_period = av.df_exp
         data = []
         order = df_period.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum']).index.strftime('%b-%Y')
 
@@ -448,6 +457,7 @@ def register_callbacks(app, av, fc):
     
     def update_av_fc(start_date, end_date, length=3):
         start_date, end_date = convert_picker_dates(start_date, end_date)
+        print('Start: {}, END: {}'.format(start_date, end_date))
         if start_date != acc_view.start_date or end_date != acc_view.end_date or length != frcst.length:
             print('Recalculating...')
             acc_view.set_start_end_date(start_date, end_date)
