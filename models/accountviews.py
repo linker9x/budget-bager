@@ -23,7 +23,6 @@ class AccountViews:
         self.df_fix_exp_month = pd.DataFrame()  # sum, avg and std of FIX exp grouped by month
         self.df_exp_month_cat = pd.DataFrame()  # sum, avg and std of exp grouped by month and cat
         self.df_inc_month_cat = pd.DataFrame()  # sum, avg and std of inc grouped by month and cat
-        self.df_rec_items = pd.DataFrame()      # problems
         self.update_views()
 
 
@@ -40,8 +39,7 @@ class AccountViews:
         return 'Start: {}, End: {}\n' \
                'Fix: {}\n' \
                'Var: {}\n' \
-               'Filters: {}\n' \
-               'Rec Items:\n{}'.format(self.start_date,
+               'Filters: {}\n'.format(self.start_date,
                                       self.end_date,
                                       self.fix_exp,
                                       self.var_exp,
@@ -52,8 +50,7 @@ class AccountViews:
                                        'df_var_exp_month': self.df_var_exp_month.empty,
                                        'df_fix_exp_month': self.df_fix_exp_month.empty,
                                        'df_exp_month_cat': self.df_exp_month_cat.empty,
-                                       'df_inc_month_cat': self.df_inc_month_cat.empty},
-                                      self.df_rec_items
+                                       'df_inc_month_cat': self.df_inc_month_cat.empty}
                                       )
 
     def set_start_end_date(self, start_date, end_date):
@@ -64,7 +61,6 @@ class AccountViews:
         self.checking = PNCAccount('./exp_data/PNC', self.start_date, self.end_date)
         self.credit = [ChaseAccount('./exp_data/Chase', self.start_date, self.end_date)]
         print('self start:{} self end:{}'.format(self.start_date, self.end_date))
-        self._reconcile()
         self._check_exp_labels()
 
         self._filter_exp_inc()
@@ -91,23 +87,39 @@ class AccountViews:
         if len(set(df_chk['Combined'].unique()) - labels) != 0:
             raise Exception('Checking expenses mislabeled.')
 
-        if len(set(df_crdt['Combined'].unique()) - labels):
+        if len(set(df_crdt['Combined'].unique()) - labels) != 0:
             raise Exception('Credit expenses mislabeled.')
 
     def _filter_exp_inc(self):
         df_bs = self.checking.get_debits()
         df_cs = self.credit[0].get_debits()
 
-        print(df_bs)
-        print(df_cs)
+        refunds = self.credit[0].get_credits()
+        refunds = refunds[refunds['Category'] != 'PAYMENT']
 
         bs_ids = set(df_bs[df_bs['Category'] == 'PAYMENT']['ID'].to_list())
         cs_ids = set(df_cs['ID'].unique())
 
-        print(bs_ids - cs_ids)
-        self.df_exp = pd.concat([self.checking.get_debits(), self.credit[0].get_debits()])
+        if len(bs_ids - cs_ids) != 0:
+            raise Exception('Missing Payment ID.')
 
-        self.df_inc = pd.concat([self.checking.get_credits(), self.credit[0].get_credits()])
+        balance = df_bs[df_bs['Category'] == 'PAYMENT'][['ID', 'Amount', 'Date']].reset_index(drop=True)
+        credit = df_cs[df_cs['ID'].isin(bs_ids)].groupby('ID').sum().reset_index()
+        
+        comp = pd.merge(balance, credit, on='ID', suffixes=('_bal', '_crd')).round(2)
+        comp = pd.merge(comp, refunds[['ID', 'Amount']], on='ID')
+        comp['Amount_crd'] = (comp['Amount_crd'] + comp['Amount']).round(2)
+
+        issues = comp[comp['Amount_bal'] != comp['Amount_crd']]
+        if not issues.empty:
+            raise Exception(issues)
+
+        df_cs_pay_date = pd.merge(df_cs, balance[['ID', 'Date']], on='ID', how='left', suffixes=('_old', ''))
+        df_cs_pay_date.drop('Date_old', axis=1, inplace=True)
+
+        self.df_exp = pd.concat([df_bs[~df_bs['Category'].isin(['PAYMENT', 'SAVINGS'])],
+                                 df_cs_pay_date[df_cs_pay_date['ID'].isin(bs_ids)]])
+        self.df_inc = pd.concat([self.checking.get_credits(), refunds])
 
     def _filter_fix_var_exp(self):
         self.df_fix_exp = self.df_exp[self.df_exp['Combined'].isin(self.fix_exp)]
@@ -137,48 +149,3 @@ class AccountViews:
              'mean',
              'std'])
         self.df_inc_month_cat = self.df_inc_month_cat.unstack(fill_value=0).round(2).stack()
-
-    def _reconcile(self):
-        # Payments reflected on Chase statements
-        df_chase_pymnt = self.credit[0].get_credits()
-        df_chase_pymnt = df_chase_pymnt[df_chase_pymnt['Category'] == 'PAYMENT']
-        df_chase_pymnt = df_chase_pymnt.filter(['ID', 'Amount']).reset_index(drop=True)
-
-        # Returns on Chase statements
-        df_chase_other = self.credit[0].get_credits()
-        df_chase_other = df_chase_other[df_chase_other['Category'] != 'PAYMENT']
-        df_chase_other = df_chase_other.filter(['ID', 'Amount']).reset_index(drop=True)
-
-        # Agg expenses from Chase statements by payment ID
-        df_chase_chrg = self.credit[0].get_debits()
-        df_chase_chrg = df_chase_chrg.groupby(['ID'])['Amount'].agg(['sum']).reset_index()
-
-        # Merge three to confirm that expenses are covered by payments or returns !!!
-        df_rec = pd.merge(df_chase_pymnt, df_chase_chrg, how='outer', on='ID')
-        df_rec = pd.merge(df_rec, df_chase_other, how='outer', on='ID', suffixes=('_pymnt', '_other')).fillna(0)
-        df_rec['abs_diff'] = df_rec['Amount_pymnt'] + df_rec['sum'] + df_rec['Amount_other']
-        df_rec['abs_diff'] = df_rec['abs_diff'].abs()
-        df_rec = df_rec[df_rec['abs_diff'] > 0.0001].round(2)
-
-        # Payments to Chase reflected on PNC statements
-        df_pnc_pymnt = self.checking.get_debits()
-        df_pnc_pymnt = df_pnc_pymnt[df_pnc_pymnt['Category'] == 'PAYMENT']
-        df_pnc_pymnt = df_pnc_pymnt.filter(['Date', 'Amount']).reset_index(drop=True)
-        df_pnc_pymnt['Amount'] = df_pnc_pymnt['Amount'].abs()
-
-        # Merge Payments reflected on Chase and PNC Statements to confirm they match ***
-        df_payments = pd.merge(df_chase_pymnt, df_pnc_pymnt, how='outer', on='Amount', indicator=True)
-        df_payments = df_payments[df_payments['_merge'] != 'both']
-        df_payments.drop('_merge', axis=1, inplace=True)
-
-        # Merge !!! and *** to try and reconcile the issues. This should resolve most timing problems.
-        df_final = pd.merge(df_payments,
-                            df_rec,
-                            how='outer',
-                            left_on='Amount',
-                            right_on='abs_diff',
-                            suffixes=('_PNC', '_Chase'),
-                            indicator=True).round(2)
-        df_final = df_final[df_final['_merge'] != 'both']
-
-        self.df_rec_items = df_final
