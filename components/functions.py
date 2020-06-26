@@ -60,7 +60,7 @@ def update_summary_table(acc_view, frcst, type):
     df_combined = df_combined.sort_values(by=['sum', 'Amount'], ascending=False)
     df_combined = df_combined.filter(['Category', 'Subcategory', 'sum', 'Amount'])
     df_combined.rename(columns={'Amount': 'Budget', 'sum': 'Actual'}, inplace=True)
-    df_combined['Diff'] = df_combined['Budget'] - df_combined['Actual']
+    df_combined['Diff'] = (df_combined['Budget'] - df_combined['Actual']).round(2)
     return df_combined.to_dict("rows")
 
 
@@ -100,16 +100,16 @@ def update_datatable(acc_view, start_date, end_date, categories, accounts):
     df_sub = df_sub[(df_sub['Date'] >= start_date_string) & (df_sub['Date'] <= end_date_string)
                     & df_sub['Category'].isin(categories)
                     & df_sub['Source'].isin(accounts)].sort_values(by=['Date'], ascending=False).reset_index(drop=True)
-    return df_sub
+    return df_sub.round(2)
 
-
+##
 def update_period_df(start_date, end_date):
     start_date_string, end_date_string = convert_picker_dates(start_date, end_date)
 
     df_sub = copy.deepcopy(df)
     df_sub = df_sub[(df_sub['Date'] >= start_date_string) & (df_sub['Date'] <= end_date_string)
                     & ~df_sub['Category'].isin(['PAYMENT', 'SAVINGS'])].sort_values(by=['Date']).reset_index(drop=True)
-    return df_sub
+    return df_sub.round(2)
 
 
 def update_period_df_all(start_date, end_date):

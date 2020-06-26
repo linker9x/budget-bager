@@ -175,12 +175,9 @@ def register_callbacks(app, av, fc):
 
         df_credit = copy.deepcopy(av.df_inc)
         df_debit = copy.deepcopy(av.df_exp)
-        # print(df_debit[df_debit['Date'] < '2020-01-01'])
+
         df_credit = df_credit[df_credit['Category'].isin(['INTEREST', 'INCOME'])].groupby(pd.Grouper(key='Date', freq='M')).sum()
         df_debit = df_debit.groupby(pd.Grouper(key='Date', freq='M')).sum()
-        # print(av.df_var_exp_month)
-        # print(av.df_fix_exp_month)
-        # print(df_debit)
 
         data = [go.Scatter(x=[mon.strftime('%B') for mon in df_credit.index],
                            y=df_credit['Amount'],
@@ -200,22 +197,19 @@ def register_callbacks(app, av, fc):
                    Input('p2-exp-radio', 'value')])
     def update_p2_stacked(start_date, end_date, type):
         update_av_fc(start_date, end_date)
-        df_period = av.df_exp
+        df_exp_cat = copy.deepcopy(av.df_exp_month_cat).reset_index()
 
-        order = agg_by_month(start_date, end_date).index.strftime('%b-%Y')
+        order = list(df_exp_cat['Date'].unique())
 
         if type == 'FIX':
-            exp_cat = get_fix_exp()
+            exp_cat = av.fix_exp
         else:
-            exp_cat = get_var_exp()
+            exp_cat = av.var_exp
 
         data = []
         for cat in exp_cat:
-            df_cat = df_period[(df_period['Amount'] < 0) &
-                               (df_period['Combined'] == cat)].groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
-
-            trace = go.Bar(x=df_cat.index.strftime('%b-%Y'),
-                           y=df_cat['sum'].abs(),
+            trace = go.Bar(x=df_exp_cat['Date'].dt.strftime('%b-%Y'),
+                           y=df_exp_cat[df_exp_cat['Combined'] == cat]['sum'].abs(),
                            name=cat.split()[0].capitalize() + ' (' + cat.split()[1].capitalize() + ')')
             data.append(trace)
 
@@ -228,15 +222,17 @@ def register_callbacks(app, av, fc):
                    Input('per-picker-dd2', 'value'),
                    Input('p2-exp-radio', 'value')])
     def update_p2_var(start_date, end_date, type):
-        df_period = av.df_exp
-        df_cat = df_period[df_period['Amount'] < 0].groupby('Combined')['Amount'].agg(['sum'])
-        if type == 'FIX':
-            exp_cat = get_fix_exp()
-        else:
-            exp_cat = get_var_exp()
-        df_exp = df_cat[df_cat.index.isin(exp_cat)]
+        update_av_fc(start_date, end_date)
+        df_exp_cat = copy.deepcopy(av.df_exp_month_cat).reset_index()
 
-        data = [go.Pie(labels=df_exp.index, values=df_exp['sum'].abs())]
+        if type == 'FIX':
+            exp_cat = av.fix_exp
+        else:
+            exp_cat = av.var_exp
+
+        df_exp = df_exp_cat[df_exp_cat['Combined'].isin(exp_cat)]
+
+        data = [go.Pie(labels=df_exp['Combined'], values=df_exp['sum'].abs())]
         layout = go.Layout()
         return {'data': data, 'layout': None}
 
@@ -245,7 +241,20 @@ def register_callbacks(app, av, fc):
                   [Input('per-picker-dd1', 'value'),
                    Input('per-picker-dd2', 'value')])
     def update_p2_table(start_date, end_date):
-        return update_p2_varfix_table(start_date, end_date).to_dict("rows")
+        update_av_fc(start_date, end_date)
+        df_var = av.df_var_exp_month
+        df_fix = av.df_fix_exp_month
+
+        df_var = df_var.reset_index()
+        df_fix = df_fix.reset_index()
+
+        df_var_fix = pd.merge(df_var[['Date', 'sum']], df_fix[['Date', 'sum']], how='outer', on='Date', suffixes=('_var', '_fix'))
+        df_var_fix = df_var_fix.fillna(0).reset_index()
+        df_var_fix['Total'] = df_var_fix['sum_var'] + df_var_fix['sum_fix']
+        df_var_fix['Date'] = df_var_fix["Date"].dt.strftime('%b-%Y')
+        df_var_fix.rename(columns={'Date': 'Month', 'sum_var': 'Variable', 'sum_fix': 'Fixed'}, inplace=True)
+
+        return df_var_fix.to_dict("rows")
 
     #######################
     #

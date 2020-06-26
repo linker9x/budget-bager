@@ -1,6 +1,7 @@
 from models.accounts.checking_account import PNCAccount
 from models.accounts.credit_account import ChaseAccount
 import pandas as pd
+import copy
 
 
 class AccountViews:
@@ -91,10 +92,10 @@ class AccountViews:
             raise Exception('Credit expenses mislabeled.')
 
     def _filter_exp_inc(self):
-        df_bs = self.checking.get_debits()
-        df_cs = self.credit[0].get_debits()
+        df_bs = copy.deepcopy(self.checking.get_debits())
+        df_cs = copy.deepcopy(self.credit[0].get_debits())
 
-        refunds = self.credit[0].get_credits()
+        refunds = copy.deepcopy(self.credit[0].get_credits())
         refunds = refunds[refunds['Category'] != 'PAYMENT']
 
         bs_ids = set(df_bs[df_bs['Category'] == 'PAYMENT']['ID'].to_list())
