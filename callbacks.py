@@ -248,7 +248,11 @@ def register_callbacks(app, av, fc):
         df_var = df_var.reset_index()
         df_fix = df_fix.reset_index()
 
-        df_var_fix = pd.merge(df_var[['Date', 'sum']], df_fix[['Date', 'sum']], how='outer', on='Date', suffixes=('_var', '_fix'))
+        df_var_fix = pd.merge(df_var[['Date', 'sum']],
+                              df_fix[['Date', 'sum']],
+                              how='outer',
+                              on='Date',
+                              suffixes=('_var', '_fix'))
         df_var_fix = df_var_fix.fillna(0).reset_index()
         df_var_fix['Total'] = df_var_fix['sum_var'] + df_var_fix['sum_fix']
         df_var_fix['Date'] = df_var_fix["Date"].dt.strftime('%b-%Y')
@@ -287,7 +291,8 @@ def register_callbacks(app, av, fc):
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_box(start_date, end_date, categories, mode):
-        df_period = av.df_exp
+        update_av_fc(start_date, end_date)
+        df_period = copy.deepcopy(av.df_exp)
         data = []
 
         if mode == 'MULTI':
@@ -316,24 +321,26 @@ def register_callbacks(app, av, fc):
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_bar(start_date, end_date, categories, mode):
-        df_period = av.df_exp
+        update_av_fc(start_date, end_date)
+        order = av.df_var_exp_month.index.strftime('%b-%Y')
+
         data = []
-        order = df_period.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum']).index.strftime('%b-%Y')
+        df_cat_grouped = copy.deepcopy(av.df_exp_month_cat).reset_index()
+        df_cat_sub = df_cat_grouped['Combined'].str.split(" ", n=1, expand=True)
+        df_cat_grouped['Category'] = df_cat_sub[0]
 
         if mode == 'MULTI':
             for cat in categories:
-                df_cat = df[df['Category'] == cat]
-                df_cat_grouped = df_cat.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
-                trace = go.Bar(x=df_cat_grouped.index.strftime('%b-%Y'),
-                               y=df_cat_grouped['sum'].abs(),
+                df_cat = df_cat_grouped[df_cat_grouped['Category'] == cat]
+                trace = go.Bar(x=df_cat['Date'].dt.strftime('%b-%Y'),
+                               y=df_cat['sum'].abs(),
                                name=cat)
                 data.append(trace)
 
         elif mode == 'MONO':
-            df_cat = df[df['Category'] == categories]
-            df_cat_grouped = df_cat.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
-            trace = go.Bar(x=df_cat_grouped.index.strftime('%b-%Y'),
-                           y=df_cat_grouped['sum'].abs(),
+            df_cat = df_cat_grouped[df_cat_grouped['Category'] == categories]
+            trace = go.Bar(x=df_cat['Date'].dt.strftime('%b-%Y'),
+                           y=df_cat['sum'].abs(),
                            name=categories)
             data.append(trace)
 
@@ -347,24 +354,26 @@ def register_callbacks(app, av, fc):
                    Input('p3-cat-dropdown', 'value'),
                    Input('p3-mode-dropdown', 'value')])
     def update_p3_time(start_date, end_date, categories, mode):
-        df_period = av.df_exp
+        update_av_fc(start_date, end_date)
+        order = av.df_var_exp_month.index.strftime('%b-%Y')
+
         data = []
-        order = df_period.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum']).index.strftime('%b-%Y')
+        df_cat_grouped = copy.deepcopy(av.df_exp_month_cat).reset_index()
+        df_cat_sub = df_cat_grouped['Combined'].str.split(" ", n=1, expand=True)
+        df_cat_grouped['Category'] = df_cat_sub[0]
 
         if mode == 'MULTI':
             for cat in categories:
-                df_cat = df_period[df_period['Category'] == cat]
-                df_cat_grouped = df_cat.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
-                trace = go.Scatter(x=df_cat_grouped.index.strftime('%b-%Y'),
-                                   y=df_cat_grouped['sum'].abs(),
+                df_cat = df_cat_grouped[df_cat_grouped['Category'] == cat]
+                trace = go.Scatter(x=df_cat['Date'].dt.strftime('%b-%Y'),
+                                   y=df_cat['sum'].abs(),
                                    name=cat)
                 data.append(trace)
 
         elif mode == 'MONO':
-            df_cat = df_period[df_period['Category'] == categories]
-            df_cat_grouped = df_cat.groupby(pd.Grouper(key='Date', freq='M'))['Amount'].agg(['sum'])
-            trace = go.Scatter(x=df_cat_grouped.index.strftime('%b-%Y'),
-                               y=df_cat_grouped['sum'].abs(),
+            df_cat = df_cat_grouped[df_cat_grouped['Category'] == categories]
+            trace = go.Scatter(x=df_cat['Date'].dt.strftime('%b-%Y'),
+                               y=df_cat['sum'].abs(),
                                name=categories)
             data.append(trace)
 
