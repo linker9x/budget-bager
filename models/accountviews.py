@@ -118,9 +118,12 @@ class AccountViews:
         df_cs_pay_date = pd.merge(df_cs, balance[['ID', 'Date']], on='ID', how='left', suffixes=('_old', ''))
         df_cs_pay_date.drop('Date_old', axis=1, inplace=True)
 
-        self.df_exp = pd.concat([df_bs[~df_bs['Category'].isin(['PAYMENT', 'SAVINGS'])],
+        df_exp_tmp = pd.concat([df_bs[~df_bs['Category'].isin(['PAYMENT', 'SAVINGS'])],
                                  df_cs_pay_date[df_cs_pay_date['ID'].isin(bs_ids)]])
-        self.df_inc = pd.concat([self.checking.get_credits(), refunds])
+        df_inc_tmp = pd.concat([self.checking.get_credits(), refunds])
+
+        self.df_exp = df_exp_tmp[(df_exp_tmp['Date'] >= self.start_date) & (df_exp_tmp['Date'] <= self.end_date)]
+        self.df_inc = df_inc_tmp[(df_inc_tmp['Date'] >= self.start_date) & (df_inc_tmp['Date'] <= self.end_date)]
 
     def _filter_fix_var_exp(self):
         self.df_fix_exp = self.df_exp[self.df_exp['Combined'].isin(self.fix_exp)]

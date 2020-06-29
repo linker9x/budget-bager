@@ -236,14 +236,17 @@ def register_callbacks(app, av, fc):
         layout = go.Layout()
         return {'data': data, 'layout': None}
 
-    # P2 - Expenses Stacked Bar Graph
+    # P2 - Expenses Data Table
     @app.callback(Output('p2-exp-datatable', 'data'),
                   [Input('per-picker-dd1', 'value'),
                    Input('per-picker-dd2', 'value')])
     def update_p2_table(start_date, end_date):
         update_av_fc(start_date, end_date)
+        print(av.start_date)
+        print(av.end_date)
         df_var = av.df_var_exp_month
         df_fix = av.df_fix_exp_month
+        print(av.df_exp)
 
         df_var = df_var.reset_index()
         df_fix = df_fix.reset_index()
@@ -255,9 +258,9 @@ def register_callbacks(app, av, fc):
                               suffixes=('_var', '_fix'))
         df_var_fix = df_var_fix.fillna(0).reset_index()
         df_var_fix['Total'] = df_var_fix['sum_var'] + df_var_fix['sum_fix']
-        df_var_fix['Date'] = df_var_fix["Date"].dt.strftime('%b-%Y')
+        df_var_fix['Date'] = df_var_fix['Date'].dt.strftime('%b-%Y')
         df_var_fix.rename(columns={'Date': 'Month', 'sum_var': 'Variable', 'sum_fix': 'Fixed'}, inplace=True)
-
+        print(df_var_fix)
         return df_var_fix.to_dict("rows")
 
     #######################
@@ -402,6 +405,8 @@ def register_callbacks(app, av, fc):
         boxData = args[-2]
         barData = args[-1]
 
+        update_av_fc(dp_start_date, dp_end_date)
+
         if timeData:
             month_year = timeData['points'][0]['x']
 
@@ -412,7 +417,7 @@ def register_callbacks(app, av, fc):
             start_date = datetime.strptime(month_year+'-1', '%b-%Y-%d').strftime('%Y-%m-%d')
             end_date = datetime.strptime(month_year+'-'+str(eom), '%b-%Y-%d').strftime('%Y-%m-%d')
 
-            return update_p3_table_df(start_date, end_date, categories, mode)
+            return update_p3_table_df(av, start_date, end_date, categories, mode)
         if boxData:
             if mode == 'MULTI':
                 category = [boxData['points'][0]['x']]
@@ -429,7 +434,7 @@ def register_callbacks(app, av, fc):
                 start_date = datetime.strptime(month_year + '-1', '%b-%Y-%d').strftime('%Y-%m-%d')
                 end_date = datetime.strptime(month_year + '-' + str(eom), '%b-%Y-%d').strftime('%Y-%m-%d')
 
-            return update_p3_table_df(start_date, end_date, category, mode)
+            return update_p3_table_df(av, start_date, end_date, category, mode)
 
         elif barData:
             month_year = barData['points'][0]['x']
@@ -441,7 +446,7 @@ def register_callbacks(app, av, fc):
             start_date = datetime.strptime(month_year+'-1', '%b-%Y-%d').strftime('%Y-%m-%d')
             end_date = datetime.strptime(month_year+'-'+str(eom), '%b-%Y-%d').strftime('%Y-%m-%d')
 
-            return update_p3_table_df(start_date, end_date, categories, mode)
+            return update_p3_table_df(av, start_date, end_date, categories, mode)
         return pd.DataFrame().to_dict('rows')
 
     #######################
