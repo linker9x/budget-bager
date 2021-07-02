@@ -86,9 +86,11 @@ class AccountViews:
         labels = set(labels)
 
         if len(set(df_chk['Combined'].unique()) - labels) != 0:
+            print(set(df_chk['Combined'].unique()) - labels)
             raise Exception('Checking expenses mislabeled.')
 
         if len(set(df_crdt['Combined'].unique()) - labels) != 0:
+            print(set(df_crdt['Combined'].unique()) - labels)
             raise Exception('Credit expenses mislabeled.')
 
     def _filter_exp_inc(self):

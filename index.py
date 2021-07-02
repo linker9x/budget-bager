@@ -38,7 +38,7 @@ app.layout = html.Div([
 # # # # # # # # #
 # Models
 # # # # # # # # #
-av = AccountViews('2020-01-01', '2020-05-31')
+av = AccountViews('2020-01-01', '2020-06-30')
 fc = Forecast(av, length=3)
 
 # # # # # # # # #
